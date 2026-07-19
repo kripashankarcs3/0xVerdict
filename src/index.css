@@ -1,0 +1,119 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+@keyframes drift-down {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 96px; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glow-flash {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes strikethrough {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes rotate-hex {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes typewriter-cursor {
+  0%, 100% { border-color: #00FF88; }
+  50% { border-color: transparent; }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: #0A0A0F;
+  color: #F0F0F0;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #0A0A0F; }
+::-webkit-scrollbar-thumb { background: #1E2030; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #2A2D45; }
+
+input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+.dot-grid-bg {
+  background-image: radial-gradient(circle, #1E2030 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.2;
+  animation: drift-down 20s linear infinite;
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+.shimmer-bar::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 25%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 1.5s linear infinite;
+}
+
+.terminal-line {
+  animation: fade-slide-up 200ms ease-out both;
+}
+
+.ai-panel-enter {
+  animation: slide-in-right 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.verdict-text {
+  animation: glow-flash 300ms ease-out;
+}
+
+.finding-row-enter {
+  animation: fade-slide-up 250ms ease-out both;
+}
