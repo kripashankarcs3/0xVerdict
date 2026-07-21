@@ -1,26 +1,96 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import finalLogo from '@/imports/final_logo.png'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import type { BackendFinding } from './types'
+import type { ScanResult } from './types/api'
+import { startScan, getScanStatus, getScanResult } from './utils/api'
+import { getMarkdownReportUrl, getPdfReportUrl } from './utils/api'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  bgPrimary: '#0A0A0F',
-  bgSecondary: '#0F0F1A',
-  bgTertiary: '#13131F',
-  bgInput: '#080810',
+  bgPrimary: '#08090D',
+  bgSecondary: '#0E1017',
+  bgTertiary: '#12141D',
+  bgInput: '#07080C',
   green: '#00FF88',
+  greenSecondary: '#38E07A',
   cyan: '#00D4FF',
   red: '#FF3366',
   orange: '#FFB800',
   purple: '#7B61FF',
-  muted: '#8892A4',
-  textPrimary: '#F0F0F0',
-  border: '#1E2030',
-  borderStrong: '#2A2D45',
+  muted: '#A7B0BE',
+  textPrimary: '#F5F7FA',
+  border: '#1A1D2E',
+  borderStrong: '#252840',
 }
 
 const mono = "'JetBrains Mono', monospace"
 const grotesk = "'Space Grotesk', sans-serif"
 const inter = "'Inter', sans-serif"
+
+// ─── Terminal line type ────────────────────────────────────────────────────────
+interface TerminalLine {
+  text: string
+  color: string
+  bold: boolean
+}
+
+// ─── Mapper: BackendFinding → Finding ──────────────────────────────────────────
+function mapFinding(b: BackendFinding): Finding {
+  const ai = b.ai_analysis
+  let verdict: Finding['verdict'] = 'verify'
+  if (ai?.verdict === 'Confirmed') verdict = 'confirmed'
+  else if (ai?.verdict === 'Likely False Positive') verdict = 'fp'
+
+  let severity: Finding['severity'] = 'medium'
+  const sev = (ai?.severity_classified || b.scanner_severity).toLowerCase()
+  if (sev.startsWith('crit')) severity = 'critical'
+  else if (sev.startsWith('high')) severity = 'high'
+  else if (sev.startsWith('medium')) severity = 'medium'
+  else severity = 'low'
+
+  let priority: Finding['priority'] = 'normal'
+  const pri = (ai?.priority_recommendation || '').toLowerCase()
+  if (pri.startsWith('immediate')) priority = 'immediate'
+  else if (pri.startsWith('high')) priority = 'high'
+  else if (pri.startsWith('normal')) priority = 'normal'
+  else priority = 'low'
+
+  let confidence: Finding['confidence'] = 'MEDIUM'
+  if (verdict === 'confirmed') confidence = 'HIGH'
+  else if (verdict === 'fp') confidence = 'LOW'
+
+  const manualSteps = ai?.manual_verification_guide
+    ? ai.manual_verification_guide.split('\n').filter(s => s.trim()).map(s => s.replace(/^\d+[\.\)]\s*/, ''))
+    : ['Verify this finding manually in a browser.']
+
+  const priorityNote = ai?.priority_reason
+    ? ai.priority_reason
+    : `${ai?.verdict || b.scanner_severity} — review recommended.`
+
+  return {
+    id: b.id,
+    type: b.type,
+    endpoint: b.endpoint,
+    verdict,
+    severity,
+    scannerSeverity: b.scanner_severity,
+    aiSeverity: ai?.severity_classified || b.scanner_severity,
+    priority,
+    confidence,
+    priorityReason: ai?.priority_reason || '',
+    confidenceReason: ai?.confidence_reason || '',
+    rootCause: ai?.root_cause || '',
+    devExplanation: ai?.developer_explanation || '',
+    fixRecommendation: ai?.fix_recommendation || '',
+    remediationCode: ai?.remediation_code?.secure_code_example || '',
+    manualSteps,
+    priorityNote,
+  }
+}
+
+function mapFindings(backend: BackendFinding[] | null | undefined): Finding[] {
+  if (!backend || !Array.isArray(backend)) return []
+  return backend.map(mapFinding)
+}
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 interface Finding {
@@ -43,130 +113,7 @@ interface Finding {
   priorityNote: string
 }
 
-const FINDINGS: Finding[] = [
-  {
-    id: 'vuln_001', type: 'SQL Injection', endpoint: '/login',
-    verdict: 'confirmed', severity: 'critical', scannerSeverity: 'HIGH', aiSeverity: 'CRITICAL',
-    priority: 'immediate', confidence: 'HIGH',
-    priorityReason: 'Direct database compromise possible via auth bypass.',
-    confidenceReason: 'Database returned explicit SQL syntax error directly tied to input.',
-    rootCause: 'User data directly concatenated into raw SQL string.',
-    devExplanation: 'The payload broke the SQL query structure, altering backend behavior to return all user records.',
-    fixRecommendation: 'Use parameterized queries or ORM binding.',
-    remediationCode: "const sql = 'SELECT * FROM users WHERE username = ?';\ndb.query(sql, [userInput]);",
-    manualSteps: [
-      'Intercept the request using browser DevTools Network tab.',
-      "Append the payload ' OR 1=1-- to the username parameter.",
-      'Submit and check response for SQL exception message.',
-    ],
-    priorityNote: 'Fix this before XSS and header issues — direct data exposure risk.',
-  },
-  {
-    id: 'vuln_002', type: 'Reflected XSS', endpoint: '/search',
-    verdict: 'confirmed', severity: 'high', scannerSeverity: 'HIGH', aiSeverity: 'HIGH',
-    priority: 'high', confidence: 'HIGH',
-    priorityReason: 'Reflected XSS can steal session tokens and credentials.',
-    confidenceReason: 'Script tag reflected verbatim in response body without encoding.',
-    rootCause: 'User input rendered directly in HTML response without escaping.',
-    devExplanation: 'The search query parameter is embedded in the page response without sanitization, allowing script injection.',
-    fixRecommendation: 'Encode all user-supplied data before rendering in HTML context.',
-    remediationCode: "const safe = encodeURIComponent(userInput);\nres.send(`<p>${safe}</p>`);",
-    manualSteps: [
-      'Navigate to /search?q=<script>alert(1)</script>',
-      'Observe if the alert dialog executes in the browser.',
-      'Check page source for unescaped script tag in response.',
-    ],
-    priorityNote: 'Address after SQL Injection — session theft risk remains significant.',
-  },
-  {
-    id: 'vuln_003', type: 'Missing Content-Security-Policy', endpoint: '/',
-    verdict: 'confirmed', severity: 'medium', scannerSeverity: 'MEDIUM', aiSeverity: 'MEDIUM',
-    priority: 'normal', confidence: 'HIGH',
-    priorityReason: 'CSP absence enables broader XSS attack surface.',
-    confidenceReason: 'HTTP response headers confirmed absence of CSP directive.',
-    rootCause: 'Server configuration does not set Content-Security-Policy header.',
-    devExplanation: 'Without CSP, browsers have no restrictions on script execution sources.',
-    fixRecommendation: 'Add Content-Security-Policy header in server middleware.',
-    remediationCode: "app.use((req, res, next) => {\n  res.setHeader('Content-Security-Policy',\n    \"default-src 'self'\");\n  next();\n});",
-    manualSteps: [
-      'Open DevTools → Network tab → select any page response.',
-      'Check Response Headers for Content-Security-Policy.',
-      'Confirm it is absent in the current implementation.',
-    ],
-    priorityNote: 'Implement as part of a security header hardening pass.',
-  },
-  {
-    id: 'vuln_004', type: 'Missing HSTS', endpoint: '/',
-    verdict: 'verify', severity: 'low', scannerSeverity: 'LOW', aiSeverity: 'LOW',
-    priority: 'low', confidence: 'MEDIUM',
-    priorityReason: 'HSTS absence may allow protocol downgrade on public networks.',
-    confidenceReason: 'Testing on localhost — HSTS is typically not applicable to local environments.',
-    rootCause: 'Strict-Transport-Security header not configured in server response.',
-    devExplanation: 'HSTS forces HTTPS connections, preventing protocol downgrade attacks.',
-    fixRecommendation: 'Add HSTS header in production HTTPS configuration only.',
-    remediationCode: "app.use((req, res, next) => {\n  res.setHeader('Strict-Transport-Security',\n    'max-age=31536000; includeSubDomains');\n  next();\n});",
-    manualSteps: [
-      'Test against a production HTTPS endpoint, not localhost.',
-      'Check for Strict-Transport-Security in response headers.',
-      'Verify max-age value meets minimum 1-year requirement.',
-    ],
-    priorityNote: 'Verify in production environment — likely a false positive on localhost.',
-  },
-  {
-    id: 'vuln_005', type: 'Reflected XSS', endpoint: '/register',
-    verdict: 'fp', severity: 'medium', scannerSeverity: 'MEDIUM', aiSeverity: 'LOW',
-    priority: 'low', confidence: 'LOW',
-    priorityReason: 'Payload was not reflected — likely framework auto-encoding.',
-    confidenceReason: 'Modern framework auto-escapes template output, no reflection observed.',
-    rootCause: 'Scanner triggered on parameter presence, not actual reflection.',
-    devExplanation: 'The registration form uses a framework that auto-escapes all template variables.',
-    fixRecommendation: 'No action required — framework encoding provides sufficient protection.',
-    remediationCode: "// Framework handles escaping automatically\n// Verify template engine version is up to date",
-    manualSteps: [
-      'Manually test /register with XSS payload in each field.',
-      'Verify all payloads are properly escaped in response.',
-      'Confirm framework version has no known encoding bypass.',
-    ],
-    priorityNote: 'False positive — scanner triggered on parameter; framework protects output.',
-  },
-]
 
-const TERMINAL_LINES = [
-  { text: '> Initializing reconnaissance engine...', color: C.muted, bold: false },
-  { text: '> Target: http://localhost:3000', color: C.cyan, bold: false },
-  { text: '', color: '', bold: false },
-  { text: '> [RECON] Crawling homepage...', color: C.muted, bold: false },
-  { text: '> [RECON] Found 14 internal links', color: C.green, bold: false },
-  { text: '> [RECON] Detecting HTML forms...', color: C.muted, bold: false },
-  { text: '> [RECON] 3 forms discovered:', color: C.green, bold: false },
-  { text: '  /login    [POST] username, password', color: C.muted, bold: false },
-  { text: '  /search   [GET]  q', color: C.muted, bold: false },
-  { text: '  /register [POST] email, pass, confirm', color: C.muted, bold: false },
-  { text: '> [RECON] Collecting HTTP headers...', color: C.muted, bold: false },
-  { text: '> [RECON] Headers collected: 8 entries', color: C.green, bold: false },
-  { text: '', color: '', bold: false },
-  { text: '> [SCANNER] Running Security Header checks...', color: C.orange, bold: false },
-  { text: '> [SCANNER] Missing: Content-Security-Policy', color: C.orange, bold: false },
-  { text: '> [SCANNER] Missing: X-Frame-Options', color: C.orange, bold: false },
-  { text: '> [SCANNER] Missing: HSTS', color: C.orange, bold: false },
-  { text: '', color: '', bold: false },
-  { text: '> [SCANNER] Initializing SQL Injection tests...', color: C.orange, bold: false },
-  { text: '> [SCANNER] Testing /login → username param...', color: C.orange, bold: false },
-  { text: "> [SCANNER] Payload: ' OR 1=1--", color: C.orange, bold: false },
-  { text: '> [!!] SQL ERROR DETECTED at /login', color: C.red, bold: true },
-  { text: '> [!!] Evidence: MySQL syntax error near OR 1=1...', color: C.red, bold: false },
-  { text: '', color: '', bold: false },
-  { text: '> [SCANNER] Initializing XSS tests...', color: C.orange, bold: false },
-  { text: '> [SCANNER] Testing /search → q param...', color: C.orange, bold: false },
-  { text: '> [SCANNER] Payload: <script>alert(1)</script>', color: C.orange, bold: false },
-  { text: '> [!!] XSS REFLECTION DETECTED at /search', color: C.red, bold: true },
-  { text: '', color: '', bold: false },
-  { text: '> [AI ENGINE] Packaging raw findings...', color: C.cyan, bold: false },
-  { text: '> [AI ENGINE] Sending to AI Verdict Engine...', color: C.cyan, bold: false },
-  { text: '> [AI ENGINE] Analyzing 5 findings...', color: C.cyan, bold: false },
-  { text: '> [AI ENGINE] Processing...', color: C.cyan, bold: false },
-  { text: '  ████████████████████░░░░  80%', color: C.cyan, bold: false },
-]
 
 // ─── Background ───────────────────────────────────────────────────────────────
 function Background() {
@@ -176,11 +123,11 @@ function Background() {
       <div className="dot-grid-bg" style={{ position: 'absolute', inset: 0 }} />
       <div style={{
         position: 'absolute', inset: 0,
-        background: `radial-gradient(600px circle at top left, rgba(0,255,136,0.06), transparent)`,
+        background: `radial-gradient(800px circle at 30% 20%, rgba(0,255,136,0.04), transparent)`,
       }} />
       <div style={{
         position: 'absolute', inset: 0,
-        background: `radial-gradient(400px circle at top right, rgba(0,212,255,0.05), transparent)`,
+        background: `radial-gradient(500px circle at 70% 80%, rgba(0,255,136,0.025), transparent)`,
       }} />
     </div>
   )
@@ -199,22 +146,27 @@ function Navbar({ status }: { status: NavStatus }) {
   return (
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-      height: 64, background: 'rgba(10,10,15,0.92)',
+      height: 64, background: 'rgba(8,9,13,0.92)',
       borderBottom: `1px solid ${C.border}`,
       backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 32px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img
-          src={finalLogo}
-          alt="0xVerdict logo"
-          style={{ width: 40, height: 40, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(0,255,136,0.4))' }}
-        />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: 'rgba(0,255,136,0.06)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="18" height="20" viewBox="0 0 32 36" fill="none" style={{ display: 'block' }}>
+            <path d="M16 1L2 7V17C2 25.5 8 33 16 35C24 33 30 25.5 30 17V7L16 1Z" fill="rgba(0,255,136,0.12)" stroke="#00FF88" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M12 18L15 21L20 15" stroke="#00FF88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <div style={{ display: 'flex', gap: 0 }}>
-            <span style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 22, color: C.green }}>0x</span>
-            <span style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 22, color: C.textPrimary }}>Verdict</span>
+          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 20, letterSpacing: '0.04em' }}>
+            <span style={{ color: C.green }}>Ox</span>
+            <span style={{ color: C.textPrimary }}>Verdict</span>
           </div>
           <div style={{ fontFamily: mono, fontSize: 10, color: C.muted, display: 'flex', alignItems: 'center', gap: 2 }}>
             &gt; AI Security Analyst
@@ -280,11 +232,52 @@ function useTypewriter(text: string, delay = 40, startAfter = 0) {
 }
 
 // ─── Screen 1: Landing ────────────────────────────────────────────────────────
-function Landing({ onScan }: { onScan: (url: string) => void }) {
+function ShieldIcon({ visible }: { visible: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'center', marginBottom: 36,
+      animation: visible ? 'shield-enter 800ms cubic-bezier(0.16, 1, 0.3, 1) both' : 'none',
+    }}>
+      <div className="shield-glow" style={{
+        width: 72, height: 72, borderRadius: 20,
+        background: 'rgba(0,255,136,0.04)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        animation: visible ? 'shield-glow 4s ease-in-out infinite' : 'none',
+      }}>
+        <svg width="36" height="36" viewBox="0 0 32 36" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+          <path d="M16 1L2 7V17C2 25.5 8 33 16 35C24 33 30 25.5 30 17V7L16 1Z" fill="rgba(0,255,136,0.12)" stroke="#00FF88" strokeWidth="1.5" strokeLinejoin="round" />
+          <path d="M12 18L15 21L20 15" stroke="#00FF88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+function Wordmark({ visible }: { visible: boolean }) {
+  return (
+    <div style={{
+      marginBottom: 24,
+      animation: visible ? 'wordmark-up 600ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both' : 'none',
+    }}>
+      <span style={{
+        fontFamily: grotesk, fontWeight: 700,
+        fontSize: 'clamp(28px, 3.5vw, 36px)',
+        letterSpacing: '0.06em',
+        color: '#F5F7FA',
+        textShadow: '0 0 40px rgba(0,255,136,0.08)',
+      }}>
+        <span style={{ color: '#00FF88' }}>Ox</span>Verdict
+      </span>
+    </div>
+  )
+}
+
+function Landing({ onScan }: { onScan: (url: string, scanId: string) => void }) {
   const [url, setUrl] = useState('')
   const [focused, setFocused] = useState(false)
   const [visible, setVisible] = useState(false)
   const [cursorOn, setCursorOn] = useState(true)
+  const [scanError, setScanError] = useState<string | null>(null)
   const preTitleText = '> Initializing AI Security Engine...'
   const displayed = useTypewriter(preTitleText, 38, 500)
 
@@ -298,9 +291,16 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
     return () => clearInterval(t)
   }, [])
 
-  const handleScan = () => {
+  const handleScan = async () => {
     const target = url.trim() || 'http://localhost:3000'
-    onScan(target)
+    setScanError(null)
+    try {
+      const result = await startScan(target)
+      if (!result.scan_id) throw new Error('Backend returned an invalid response')
+      onScan(target, result.scan_id)
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : 'Failed to start scan')
+    }
   }
 
   const pills = ['🧪 localhost:3000', '🧪 testphp.vulnweb.com']
@@ -311,28 +311,19 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
       alignItems: 'center', justifyContent: 'center',
       padding: '80px 24px 0', position: 'relative', zIndex: 1,
     }}>
-      <div style={{ width: '100%', maxWidth: 680, textAlign: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 640, textAlign: 'center' }}>
 
-        {/* Logo */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', marginBottom: 28,
-          opacity: visible ? 1 : 0, transition: 'opacity 400ms 100ms',
-        }}>
-          <img
-            src={finalLogo}
-            alt="0xVerdict — AI-Powered Web Vulnerability Analysis"
-            style={{
-              width: 120, height: 120, objectFit: 'contain',
-              filter: 'drop-shadow(0 0 24px rgba(0,255,136,0.35)) drop-shadow(0 0 48px rgba(0,255,136,0.15))',
-            }}
-          />
-        </div>
+        {/* Shield Icon */}
+        <ShieldIcon visible={visible} />
+
+        {/* Wordmark */}
+        <Wordmark visible={visible} />
 
         {/* Pre-title */}
         <div style={{
           fontFamily: mono, fontSize: 12, color: C.green,
-          marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2,
-          opacity: visible ? 1 : 0, transition: 'opacity 300ms',
+          marginBottom: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2,
+          opacity: visible ? 1 : 0, transition: 'opacity 400ms 300ms',
           minHeight: 18,
         }}>
           <span>{displayed}</span>
@@ -342,22 +333,22 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
         {/* Main headline */}
         <div style={{
           opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'opacity 400ms 400ms, transform 400ms 400ms ease-out',
+          transform: visible ? 'translateY(0)' : 'translateY(16px)',
+          transition: 'opacity 500ms 500ms, transform 500ms 500ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}>
-          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 'clamp(44px, 6vw, 64px)', lineHeight: 1.1, color: C.textPrimary }}>
+          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 'clamp(40px, 5.5vw, 60px)', lineHeight: 1.1, color: C.textPrimary }}>
             Scan Smarter.
           </div>
-          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 'clamp(44px, 6vw, 64px)', lineHeight: 1.1, color: C.green }}>
+          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 'clamp(40px, 5.5vw, 60px)', lineHeight: 1.1, color: C.green }}>
             Get Verdicts.
           </div>
         </div>
 
         {/* Subheadline */}
         <p style={{
-          fontFamily: inter, fontSize: 16, color: C.muted, maxWidth: 520,
-          margin: '20px auto 0', lineHeight: 1.6,
-          opacity: visible ? 1 : 0, transition: 'opacity 300ms 700ms',
+          fontFamily: inter, fontSize: 15, color: C.muted, maxWidth: 500,
+          margin: '20px auto 0', lineHeight: 1.7,
+          opacity: visible ? 1 : 0, transition: 'opacity 400ms 700ms',
         }}>
           0xVerdict combines automated vulnerability scanning with AI analysis to eliminate false positives and deliver developer-ready security reports.
         </p>
@@ -365,39 +356,39 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
         {/* Value comparison strip */}
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr auto 1fr',
-          gap: 16, marginTop: 40, alignItems: 'center',
-          opacity: visible ? 1 : 0, transition: 'opacity 300ms 900ms',
+          gap: 16, marginTop: 44, alignItems: 'center',
+          opacity: visible ? 1 : 0, transition: 'opacity 400ms 900ms',
         }}>
-          <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: 8, padding: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: 20, marginBottom: 8 }}>🔍</div>
-            <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 13, color: C.muted, marginBottom: 6 }}>Traditional Scanner</div>
-            <div style={{ fontFamily: inter, fontSize: 12, color: C.red }}>Raw findings → Developer confused</div>
+          <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: 10, padding: '18px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 20, marginBottom: 10 }}>🔍</div>
+            <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 12, color: C.muted, marginBottom: 4, letterSpacing: '0.03em' }}>Traditional Scanner</div>
+            <div style={{ fontFamily: inter, fontSize: 11, color: C.red, opacity: 0.8 }}>Raw findings → Developer confused</div>
           </div>
-          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 32, color: C.green }}>→</div>
-          <div style={{ background: 'rgba(0,255,136,0.04)', border: `1px solid rgba(0,255,136,0.2)`, borderRadius: 8, padding: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: 20, marginBottom: 8 }}>🤖</div>
-            <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 13, color: C.textPrimary, marginBottom: 6 }}>0xVerdict</div>
-            <div style={{ fontFamily: inter, fontSize: 12, color: C.green }}>AI Verdict → Root Cause → Fix → Report</div>
+          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 28, color: C.green, opacity: 0.6 }}>→</div>
+          <div style={{ background: 'rgba(0,255,136,0.03)', border: `1px solid rgba(0,255,136,0.15)`, borderRadius: 10, padding: '18px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 20, marginBottom: 10 }}>🤖</div>
+            <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 12, color: C.textPrimary, marginBottom: 4, letterSpacing: '0.03em' }}>0xVerdict</div>
+            <div style={{ fontFamily: inter, fontSize: 11, color: C.green, opacity: 0.9 }}>AI Verdict → Root Cause → Fix → Report</div>
           </div>
         </div>
 
         {/* URL Input */}
         <div style={{
-          marginTop: 48,
+          marginTop: 44,
           opacity: visible ? 1 : 0,
           transform: visible ? 'translateY(0)' : 'translateY(12px)',
-          transition: 'opacity 300ms 1100ms, transform 300ms 1100ms ease-out',
+          transition: 'opacity 400ms 1100ms, transform 400ms 1100ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}>
           <div style={{
-            width: '100%', height: 60,
+            width: '100%', height: 56,
             background: C.bgSecondary,
             border: `1px solid ${focused ? C.green : C.border}`,
-            borderRadius: 8, display: 'flex', alignItems: 'center',
-            boxShadow: focused ? `0 0 0 3px rgba(0,255,136,0.12)` : 'none',
-            transition: 'border-color 150ms, box-shadow 150ms',
+            borderRadius: 10, display: 'flex', alignItems: 'center',
+            boxShadow: focused ? `0 0 0 3px rgba(0,255,136,0.1)` : 'none',
+            transition: 'border-color 200ms, box-shadow 200ms',
             overflow: 'hidden',
           }}>
-            <span style={{ fontFamily: mono, fontSize: 16, color: C.green, padding: '0 12px 0 16px' }}>&gt;</span>
+            <span style={{ fontFamily: mono, fontSize: 15, color: C.green, padding: '0 12px 0 16px', opacity: 0.7 }}>&gt;</span>
             <input
               value={url}
               onChange={e => setUrl(e.target.value)}
@@ -407,20 +398,20 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
               placeholder="http://localhost:3000  —  enter authorized target URL"
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                fontFamily: mono, fontSize: 14,
+                fontFamily: mono, fontSize: 13,
                 color: C.textPrimary, caretColor: C.green,
               }}
 
             />
-            <div style={{ width: 1, height: 36, background: C.border, marginRight: 0 }} />
+            <div style={{ width: 1, height: 32, background: C.border, marginRight: 0 }} />
             <button
               onClick={handleScan}
               style={{
-                height: '100%', width: 100, background: C.green,
-                border: 'none', cursor: 'pointer', borderRadius: '0 7px 7px 0',
-                fontFamily: mono, fontWeight: 700, fontSize: 13, color: C.bgPrimary,
+                height: '100%', width: 96, background: C.green,
+                border: 'none', cursor: 'pointer', borderRadius: '0 9px 9px 0',
+                fontFamily: mono, fontWeight: 700, fontSize: 12, color: '#08090D',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                transition: 'opacity 150ms',
+                transition: 'opacity 200ms',
               }}
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -439,7 +430,7 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
                 style={{
                   fontFamily: inter, fontSize: 11, color: C.muted,
                   border: `1px solid ${C.border}`, borderRadius: 20, padding: '4px 12px',
-                  background: 'transparent', cursor: 'pointer', transition: 'border-color 150ms, color 150ms',
+                  background: 'transparent', cursor: 'pointer', transition: 'border-color 200ms, color 200ms',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = C.green; e.currentTarget.style.color = C.green }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted }}
@@ -448,16 +439,26 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
               </button>
             ))}
           </div>
+
+          {/* Error message */}
+          {scanError && (
+            <div style={{
+              fontFamily: mono, fontSize: 12, color: C.red,
+              marginTop: 14, textAlign: 'center',
+            }}>
+              ⚠ {scanError}
+            </div>
+          )}
         </div>
 
         {/* Feature cards */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 48,
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginTop: 52,
         }}>
           {[
             {
               icon: (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                 </svg>
               ),
@@ -466,16 +467,16 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
             },
             {
               icon: (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.cyan} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.cyan} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
                 </svg>
               ),
               label: '⭐ CORE FEATURE', title: 'AI Verdict Engine', body: 'Confirmed · Needs Verification · Likely False Positive',
-              border: 'rgba(0,212,255,0.3)', bg: C.bgSecondary, titleColor: C.textPrimary, bodyColor: C.cyan, delay: '1380ms',
+              border: 'rgba(0,212,255,0.25)', bg: C.bgSecondary, titleColor: C.textPrimary, bodyColor: C.cyan, delay: '1380ms',
             },
             {
               icon: (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.purple} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.purple} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
                 </svg>
               ),
@@ -486,18 +487,18 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
             <div
               key={i}
               style={{
-                background: card.bg, border: `1px solid ${card.border}`, borderRadius: 8, padding: 20,
+                background: card.bg, border: `1px solid ${card.border}`, borderRadius: 10, padding: '18px 16px',
                 opacity: visible ? 1 : 0,
                 transform: visible ? 'translateY(0)' : 'translateY(16px)',
-                transition: `opacity 250ms ${card.delay}, transform 250ms ${card.delay} ease-out`,
+                transition: `opacity 300ms ${card.delay}, transform 300ms ${card.delay} cubic-bezier(0.16, 1, 0.3, 1)`,
               }}
             >
               {card.label && (
-                <div style={{ fontFamily: mono, fontSize: 9, color: C.cyan, marginBottom: 10 }}>{card.label}</div>
+                <div style={{ fontFamily: mono, fontSize: 9, color: C.cyan, marginBottom: 8, letterSpacing: '0.04em' }}>{card.label}</div>
               )}
               <div style={{ marginBottom: 10 }}>{card.icon}</div>
-              <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 14, color: card.titleColor, marginBottom: 6 }}>{card.title}</div>
-              <div style={{ fontFamily: inter, fontSize: 12, color: card.bodyColor, lineHeight: 1.5 }}>{card.body}</div>
+              <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 13, color: card.titleColor, marginBottom: 6 }}>{card.title}</div>
+              <div style={{ fontFamily: inter, fontSize: 11, color: card.bodyColor, lineHeight: 1.6 }}>{card.body}</div>
             </div>
           ))}
         </div>
@@ -507,10 +508,10 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
         background: C.bgSecondary, borderTop: `1px solid ${C.border}`,
-        padding: '12px 64px', textAlign: 'center', zIndex: 10,
-        opacity: visible ? 1 : 0, transition: 'opacity 300ms 1500ms',
+        padding: '10px 64px', textAlign: 'center', zIndex: 10,
+        opacity: visible ? 1 : 0, transition: 'opacity 400ms 1500ms',
       }}>
-        <p style={{ fontFamily: inter, fontSize: 11, color: C.muted, lineHeight: 1.5 }}>
+        <p style={{ fontFamily: inter, fontSize: 11, color: C.muted, lineHeight: 1.5, opacity: 0.7 }}>
           ⚠ NOTICE: This tool is intended exclusively for authorized security testing environments (e.g., OWASP Juice Shop, DVWA, or infrastructure where explicit written permission has been granted). Unauthorized scanning violates global cyber defense frameworks. Authors assume no liability for misuse.
         </p>
       </div>
@@ -519,50 +520,75 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
 }
 
 // ─── Screen 2: Scanning ───────────────────────────────────────────────────────
-function Scanning({ target, onComplete }: { target: string; onComplete: () => void }) {
-  const [lines, setLines] = useState<typeof TERMINAL_LINES>([])
+function Scanning({ target, scanId, onComplete }: {
+  target: string; scanId: string; onComplete: (data: ScanResult) => void
+}) {
+  const [lines, setLines] = useState<TerminalLine[]>([])
   const [elapsed, setElapsed] = useState(0)
   const [progress, setProgress] = useState(0)
-  const [counts, setCounts] = useState({ critical: 0, high: 0, medium: 0, total: 0 })
-  const [pipelineStep, setPipelineStep] = useState(0)
+  const [counts] = useState({ critical: 0, high: 0, medium: 0, total: 0 })
+  const [pipelineStep, setPipelineStep] = useState(-1)
+  const [failed, setFailed] = useState(false)
   const terminalRef = useRef<HTMLDivElement>(null)
+  const prevMessageRef = useRef<string>('')
 
   useEffect(() => {
-    let idx = 0
-    const addLine = () => {
-      if (idx < TERMINAL_LINES.length) {
-        setLines(prev => [...prev, TERMINAL_LINES[idx]])
-        idx++
-        setTimeout(addLine, idx < 13 ? 180 : idx < 22 ? 220 : 260)
-      } else {
-        setTimeout(onComplete, 1200)
-      }
-    }
-    const t = setTimeout(addLine, 300)
+    setLines([
+      { text: '> Initializing reconnaissance engine...', color: C.muted, bold: false },
+      { text: `> Target: ${target}`, color: C.cyan, bold: false },
+      { text: '', color: '', bold: false },
+    ])
 
     const elapsedIv = setInterval(() => setElapsed(p => p + 1), 1000)
-    const progressIv = setInterval(() => {
-      setProgress(p => {
-        if (p >= 92) { clearInterval(progressIv); return p }
-        return p + Math.random() * 3
-      })
-    }, 400)
 
-    // Pipeline steps
-    setTimeout(() => setPipelineStep(1), 2500)
-    setTimeout(() => setPipelineStep(2), 5000)
+    let cancelled = false
+    const POLL_INTERVAL = 2000
 
-    // Counts
-    setTimeout(() => setCounts(p => ({ ...p, medium: 1, total: 1 })), 3500)
-    setTimeout(() => setCounts(p => ({ ...p, high: 1, total: 2 })), 4500)
-    setTimeout(() => setCounts(p => ({ ...p, critical: 1, high: 2, medium: 3, total: 5 })), 6000)
+    const poll = async () => {
+      while (!cancelled) {
+        try {
+          const data = await getScanStatus(scanId)
+          if (cancelled) break
 
-    return () => {
-      clearTimeout(t)
-      clearInterval(elapsedIv)
-      clearInterval(progressIv)
+          setProgress(data.progress_percent)
+
+          const stepMap: Record<string, number> = {
+            Reconnoitering: 0, Scanning: 1, 'AI Analyzing': 2,
+          }
+          setPipelineStep(stepMap[data.scan_status] ?? -1)
+
+          if (data.pipeline_message && data.pipeline_message !== prevMessageRef.current) {
+            setLines(prev => [...prev, { text: `> ${data.pipeline_message}`, color: C.muted, bold: false }])
+            prevMessageRef.current = data.pipeline_message
+          }
+
+          if (data.scan_status === 'Completed') {
+            clearInterval(elapsedIv)
+            const full = await getScanResult(scanId)
+            setTimeout(() => onComplete(full), 800)
+            return
+          } else if (data.scan_status === 'Failed') {
+            clearInterval(elapsedIv)
+            setLines(prev => [...prev, { text: `> ERROR: ${data.pipeline_message || 'Scan failed'}`, color: C.red, bold: true }])
+            setFailed(true)
+            return
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setFailed(true)
+            setLines(prev => [...prev, { text: `> ERROR: ${err instanceof Error ? err.message : 'Connection lost'}`, color: C.red, bold: true }])
+          }
+          clearInterval(elapsedIv)
+          return
+        }
+        await new Promise(r => setTimeout(r, POLL_INTERVAL))
+      }
     }
-  }, [onComplete])
+
+    poll()
+
+    return () => { cancelled = true; clearInterval(elapsedIv) }
+  }, [scanId])
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -582,9 +608,9 @@ function Scanning({ target, onComplete }: { target: string; onComplete: () => vo
   ]
 
   const pipelineSteps = [
-    { label: 'RECON', state: pipelineStep > 0 ? 'complete' : 'waiting' },
-    { label: 'SCANNING', state: pipelineStep >= 1 && pipelineStep < 2 ? 'active' : pipelineStep >= 2 ? 'complete' : 'waiting' },
-    { label: 'AI ANALYSIS', state: pipelineStep >= 2 ? 'active' : 'waiting' },
+    { label: 'RECON', state: pipelineStep === 0 ? 'active' : pipelineStep > 0 ? 'complete' : 'waiting' },
+    { label: 'SCANNING', state: pipelineStep === 1 ? 'active' : pipelineStep > 1 ? 'complete' : 'waiting' },
+    { label: 'AI ANALYSIS', state: pipelineStep === 2 ? 'active' : 'waiting' },
   ]
 
   const recentLines = lines.slice(-3)
@@ -598,9 +624,9 @@ function Scanning({ target, onComplete }: { target: string; onComplete: () => vo
         padding: '0 32px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: C.green, flexShrink: 0 }} />
+          <div className={failed ? '' : 'pulse-dot'} style={{ width: 8, height: 8, borderRadius: '50%', background: failed ? C.red : C.green, flexShrink: 0 }} />
           <span style={{ fontFamily: mono, fontSize: 13, color: C.textPrimary }}>
-            SCANNING: <span style={{ color: C.cyan }}>{target}</span>
+            {failed ? 'FAILED:' : 'SCANNING:'} <span style={{ color: failed ? C.red : C.cyan }}>{target}</span>
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: mono, fontSize: 13, color: C.green }}>
@@ -627,17 +653,17 @@ function Scanning({ target, onComplete }: { target: string; onComplete: () => vo
             </span>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              border: `1px solid ${C.green}`, borderRadius: 20, padding: '3px 10px',
+              border: `1px solid ${failed ? C.red : C.green}`, borderRadius: 20, padding: '3px 10px',
             }}>
-              <div className="pulse-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: C.green }} />
-              <span style={{ fontFamily: mono, fontSize: 9, color: C.green }}>LIVE</span>
+              <div className={failed ? '' : 'pulse-dot'} style={{ width: 5, height: 5, borderRadius: '50%', background: failed ? C.red : C.green }} />
+              <span style={{ fontFamily: mono, fontSize: 9, color: failed ? C.red : C.green }}>{failed ? 'FAILED' : 'LIVE'}</span>
             </div>
           </div>
 
           <div
             ref={terminalRef}
             style={{
-              flex: 1, background: C.bgInput, border: `1px solid ${C.border}`,
+              flex: 1, background: C.bgInput, border: `1px solid ${failed ? C.red : C.border}`,
               borderRadius: 8, padding: 20, overflowY: 'auto',
               fontFamily: mono, fontSize: 12, lineHeight: '22px',
             }}
@@ -661,6 +687,17 @@ function Scanning({ target, onComplete }: { target: string; onComplete: () => vo
 
         {/* Right: Metrics */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Error banner */}
+          {failed && (
+            <div style={{
+              background: 'rgba(255,51,102,0.1)', border: `1px solid ${C.red}`,
+              borderRadius: 8, padding: '12px 16px',
+              fontFamily: mono, fontSize: 12, color: C.red, lineHeight: 1.5,
+            }}>
+              SCAN FAILED<br />
+              {prevMessageRef.current || 'An unknown error occurred.'}
+            </div>
+          )}
           {/* 2×2 metric grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {metricCards.map(card => (
@@ -807,7 +844,9 @@ function PriorityBadge({ priority }: { priority: Finding['priority'] }) {
 }
 
 // ─── AI Analysis Panel ────────────────────────────────────────────────────────
-function AIPanel({ finding, onDownloadPdf }: { finding: Finding | null; onDownloadPdf: () => void }) {
+function AIPanel({ finding, onDownloadPdf, markdownUrl }: {
+  finding: Finding | null; onDownloadPdf: () => void; markdownUrl: string
+}) {
   const [lang, setLang] = useState<'Node.js' | 'Python' | 'PHP'>('Node.js')
 
   if (!finding) {
@@ -993,19 +1032,22 @@ function AIPanel({ finding, onDownloadPdf }: { finding: Finding | null; onDownlo
         >
           📄 Download PDF Report
         </button>
-        <button
+        <a
+          href={markdownUrl}
+          download
           style={{
             height: 40, borderRadius: 6, cursor: 'pointer',
             background: 'transparent', border: `1px solid ${C.border}`,
             color: C.textPrimary, fontFamily: grotesk, fontWeight: 500, fontSize: 13,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             transition: 'border-color 150ms',
+            textDecoration: 'none',
           }}
           onMouseEnter={e => (e.currentTarget.style.borderColor = C.muted)}
           onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
         >
           📝 Download Markdown
-        </button>
+        </a>
         <p style={{ fontFamily: inter, fontSize: 10, color: C.muted, textAlign: 'center' }}>
           ⚠ Authorized use only. See full disclaimer in report.
         </p>
@@ -1030,12 +1072,92 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 // ─── Screen 3: Results ────────────────────────────────────────────────────────
 type FilterType = 'all' | 'confirmed' | 'verify' | 'fp'
 
-function Results({ target, onModal }: { target: string; onModal: () => void }) {
+function Results({ target, scanId, initialData, onModal }: {
+  target: string; scanId: string; initialData: ScanResult | null; onModal: () => void
+}) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [selected, setSelected] = useState<Finding | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
+  const [loading, setLoading] = useState(initialData === null)
+  const [entering, setEntering] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [scanData, setScanData] = useState<ScanResult | null>(initialData)
+  const [findings, setFindings] = useState<Finding[]>(initialData ? mapFindings(initialData.findings) : [])
 
-  const filtered = FINDINGS.filter(f => {
+  useEffect(() => {
+    if (initialData !== null) {
+      const t = setTimeout(() => setEntering(false), 500)
+      return () => clearTimeout(t)
+    }
+    getScanResult(scanId)
+      .then(data => {
+        setScanData(data)
+        setFindings(mapFindings(data.findings))
+        setLoading(false)
+        setTimeout(() => setEntering(false), 500)
+      })
+      .catch(err => {
+        setError(err instanceof Error ? err.message : 'Failed to load results')
+        setLoading(false)
+        setEntering(false)
+      })
+  }, [scanId, initialData])
+
+  if (entering) {
+    return (
+      <div style={{ paddingTop: 64, minHeight: '100vh', position: 'relative', zIndex: 1, background: C.bgPrimary }}>
+        <div style={{
+          height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 20,
+        }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: '50%',
+            border: `3px solid ${C.border}`,
+            borderTop: `3px solid ${C.green}`,
+            animation: 'spin 1s linear infinite',
+          }} />
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 14, color: C.textPrimary, marginBottom: 6 }}>
+              {loading ? 'Loading Scan Results' : 'Preparing Results'}
+            </div>
+            <div style={{ fontFamily: mono, fontSize: 12, color: C.muted }}>
+              {loading ? 'Fetching AI analysis...' : 'Finalizing report...'}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !scanData) {
+    return (
+      <div style={{ paddingTop: 64, minHeight: '100vh', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          height: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 16,
+        }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="1.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span style={{ fontFamily: mono, fontSize: 13, color: C.red }}>{error || 'Failed to load scan results'}</span>
+          <button
+            onClick={() => { setLoading(true); setError(null); getScanResult(scanId).then(d => { setScanData(d); setFindings(mapFindings(d.findings)); setLoading(false) }).catch(e => { setError(e.message); setLoading(false) }) }}
+            style={{
+              fontFamily: mono, fontSize: 12, padding: '8px 16px', borderRadius: 6,
+              border: `1px solid ${C.border}`, background: 'transparent', color: C.textPrimary,
+              cursor: 'pointer', transition: 'border-color 150ms',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = C.green)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
+          >
+            RETRY
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const filtered = findings.filter(f => {
     if (filter === 'all') return true
     if (filter === 'confirmed') return f.verdict === 'confirmed'
     if (filter === 'verify') return f.verdict === 'verify'
@@ -1044,13 +1166,13 @@ function Results({ target, onModal }: { target: string; onModal: () => void }) {
   })
 
   const counts = {
-    confirmed: FINDINGS.filter(f => f.verdict === 'confirmed').length,
-    verify: FINDINGS.filter(f => f.verdict === 'verify').length,
-    fp: FINDINGS.filter(f => f.verdict === 'fp').length,
+    confirmed: findings.filter(f => f.verdict === 'confirmed').length,
+    verify: findings.filter(f => f.verdict === 'verify').length,
+    fp: findings.filter(f => f.verdict === 'fp').length,
   }
 
   const filters: { key: FilterType; label: string }[] = [
-    { key: 'all', label: `ALL (${FINDINGS.length})` },
+    { key: 'all', label: `ALL (${findings.length})` },
     { key: 'confirmed', label: `✅ CONFIRMED (${counts.confirmed})` },
     { key: 'verify', label: `⚠ VERIFY (${counts.verify})` },
     { key: 'fp', label: `❌ FALSE POSITIVE (${counts.fp})` },
@@ -1065,9 +1187,9 @@ function Results({ target, onModal }: { target: string; onModal: () => void }) {
       }}>
         {[
           { label: 'TARGET', value: target, color: C.cyan, mono: true },
-          { label: 'SCAN DATE', value: '2026-07-19', color: C.textPrimary, mono: true },
-          { label: 'DURATION', value: '45 sec', color: C.textPrimary, mono: true },
-          { label: 'CONFIRMED', value: '3', color: C.green, big: true },
+          { label: 'SCAN DATE', value: scanData.scan_date || '—', color: C.textPrimary, mono: true },
+          { label: 'DURATION', value: scanData.scan_duration || '—', color: C.textPrimary, mono: true },
+          { label: 'CONFIRMED', value: String(scanData.summary?.confirmed ?? 0), color: C.green, big: true },
           { label: 'STATUS', value: '● COMPLETED', color: C.green, mono: true },
         ].map((stat, i, arr) => (
           <div
@@ -1184,7 +1306,11 @@ function Results({ target, onModal }: { target: string; onModal: () => void }) {
 
         {/* Right: AI panel */}
         <div style={{ padding: '20px 20px 20px 20px', overflowY: 'auto' }}>
-          <AIPanel finding={selected} onDownloadPdf={onModal} />
+          <AIPanel
+            finding={selected}
+            onDownloadPdf={onModal}
+            markdownUrl={getMarkdownReportUrl(scanData.scan_id)}
+          />
         </div>
       </div>
     </div>
@@ -1192,7 +1318,9 @@ function Results({ target, onModal }: { target: string; onModal: () => void }) {
 }
 
 // ─── Screen 4: PDF Modal ──────────────────────────────────────────────────────
-function PdfModal({ target, onClose }: { target: string; onClose: () => void }) {
+function PdfModal({ target, findings, scanData, onClose }: {
+  target: string; findings: Finding[]; scanData: ScanResult; onClose: () => void
+}) {
   return (
     <div
       onClick={e => e.target === e.currentTarget && onClose()}
@@ -1239,46 +1367,52 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
             fontFamily: "'Georgia', serif",
           }}>
             {/* Cover page */}
-            <div style={{ background: '#0A0A0F', padding: '48px 56px', minHeight: 480 }}>
+            <div style={{ background: '#08090D', padding: '48px 56px', minHeight: 480 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 48 }}>
-                <img
-                  src={finalLogo}
-                  alt="0xVerdict"
-                  style={{ width: 56, height: 56, objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(0,255,136,0.5))' }}
-                />
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  background: 'rgba(0,255,136,0.06)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <svg width="24" height="26" viewBox="0 0 32 36" fill="none" style={{ display: 'block' }}>
+                    <path d="M16 1L2 7V17C2 25.5 8 33 16 35C24 33 30 25.5 30 17V7L16 1Z" fill="rgba(0,255,136,0.12)" stroke="#00FF88" strokeWidth="1.5" strokeLinejoin="round" />
+                    <path d="M12 18L15 21L20 15" stroke="#00FF88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
                 <div>
-                  <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 28, color: '#fff' }}>
-                    <span style={{ color: '#00FF88' }}>0x</span>Verdict
+                  <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 26, color: '#F5F7FA', letterSpacing: '0.04em' }}>
+                    <span style={{ color: '#00FF88' }}>Ox</span>Verdict
                   </div>
-                  <div style={{ fontFamily: mono, fontSize: 10, color: '#8892A4' }}>AI Security Intelligence Platform</div>
+                  <div style={{ fontFamily: mono, fontSize: 10, color: '#A7B0BE' }}>AI Security Intelligence Platform</div>
                 </div>
               </div>
 
-              <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 22, color: '#F0F0F0', marginBottom: 32, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 22, color: '#F5F7FA', marginBottom: 32, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 Vulnerability Assessment Report
               </div>
 
               <table style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 48 }}>
                 {[
                   ['Target URL', target],
-                  ['Scan Date', '2026-07-19'],
-                  ['Scan Status', 'Completed'],
-                  ['Duration', '45 seconds'],
+                  ['Scan Date', scanData.scan_date || '—'],
+                  ['Scan Status', scanData.scan_status],
+                  ['Duration', scanData.scan_duration || '—'],
                   ['Generated By', '0xVerdict AI Engine v1.0.0'],
                 ].map(([k, v]) => (
                   <tr key={k}>
                     <td style={{ fontFamily: mono, fontSize: 11, color: '#8892A4', padding: '6px 0', width: 160 }}>{k}:</td>
-                    <td style={{ fontFamily: mono, fontSize: 11, color: '#F0F0F0', padding: '6px 0' }}>{v}</td>
+                    <td style={{ fontFamily: mono, fontSize: 11, color: '#F5F7FA', padding: '6px 0' }}>{v}</td>
                   </tr>
                 ))}
               </table>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2 }}>
                 {[
-                  { label: 'CRITICAL', count: 1, color: '#FF3366' },
-                  { label: 'HIGH', count: 2, color: '#FFB800' },
-                  { label: 'MEDIUM', count: 3, color: '#7B61FF' },
-                  { label: 'LOW', count: 1, color: '#8892A4' },
+                  { label: 'CRITICAL', count: scanData.summary?.critical ?? 0, color: '#FF3366' },
+                  { label: 'HIGH', count: scanData.summary?.high ?? 0, color: '#FFB800' },
+                  { label: 'MEDIUM', count: scanData.summary?.medium ?? 0, color: '#7B61FF' },
+                  { label: 'LOW', count: scanData.summary?.low ?? 0, color: '#8892A4' },
                 ].map(s => (
                   <div key={s.label} style={{ background: s.color, padding: '10px 16px' }}>
                     <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 20, color: '#fff' }}>{s.count}</div>
@@ -1291,8 +1425,8 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
             {/* Executive Summary */}
             <div style={{ padding: '48px 56px', borderBottom: '1px solid #ddd' }}>
               <h1 style={{ fontFamily: "'Georgia', serif", fontSize: 24, color: '#111', marginBottom: 16, fontWeight: 700 }}>Executive Summary</h1>
-              <p style={{ fontFamily: inter, fontSize: 14, color: '#444', lineHeight: 1.7, marginBottom: 24 }}>
-                An automated vulnerability assessment was conducted against <strong>{target}</strong> on 2026-07-19. The scan identified <strong>5 potential security issues</strong>, of which <strong>3 were confirmed</strong> by the AI Verdict Engine, <strong>1 requires manual verification</strong>, and <strong>1 was classified as a likely false positive</strong>. Immediate remediation is recommended for the confirmed SQL Injection vulnerability due to potential database compromise risk.
+                <p style={{ fontFamily: inter, fontSize: 14, color: '#444', lineHeight: 1.7, marginBottom: 24 }}>
+                An automated vulnerability assessment was conducted against <strong>{target}</strong> on {scanData.scan_date || '—'}. The scan identified <strong>{scanData.summary?.total_findings ?? 0} potential security issues</strong>, of which <strong>{scanData.summary?.confirmed ?? 0} were confirmed</strong> by the AI Verdict Engine, <strong>{scanData.summary?.needs_verification ?? 0} requires manual verification</strong>, and <strong>{scanData.summary?.false_positives ?? 0} was classified as a likely false positive</strong>. Immediate remediation is recommended for the highest severity confirmed findings.
               </p>
 
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 24, fontFamily: inter, fontSize: 13 }}>
@@ -1305,7 +1439,7 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
                 </thead>
                 <tbody>
                   <tr>
-                    {['5', '3', '1', '1'].map((v, i) => (
+                    {[scanData.summary?.total_findings ?? 0, scanData.summary?.confirmed ?? 0, scanData.summary?.needs_verification ?? 0, scanData.summary?.false_positives ?? 0].map((v, i) => (
                       <td key={i} style={{ padding: '10px 16px', border: '1px solid #e0e0e0', color: '#555' }}>{v}</td>
                     ))}
                   </tr>
@@ -1323,7 +1457,7 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
                 </thead>
                 <tbody>
                   <tr>
-                    {['1', '2', '1', '1'].map((v, i) => (
+                    {['immediate', 'high', 'normal', 'low'].map(p => String(findings.filter(f => f.priority === p).length)).map((v, i) => (
                       <td key={i} style={{ padding: '10px 16px', border: '1px solid #e0e0e0', color: '#555' }}>{v}</td>
                     ))}
                   </tr>
@@ -1332,7 +1466,7 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
             </div>
 
             {/* Finding detail */}
-            {FINDINGS.filter(f => f.verdict === 'confirmed').map(f => (
+            {findings.filter(f => f.verdict === 'confirmed').map(f => (
               <div key={f.id} style={{ padding: '40px 56px', borderBottom: '1px solid #ddd' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                   <div>
@@ -1384,17 +1518,25 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
           height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
           borderTop: `1px solid ${C.border}`, padding: '0 24px', flexShrink: 0,
         }}>
-          <button style={{
-            height: 40, padding: '0 20px', borderRadius: 6, border: 'none', cursor: 'pointer',
-            background: C.green, color: C.bgPrimary, fontFamily: grotesk, fontWeight: 600, fontSize: 13,
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>📥 Download PDF</button>
-          <button style={{
-            height: 40, padding: '0 20px', borderRadius: 6, cursor: 'pointer',
-            background: 'transparent', border: `1px solid ${C.border}`,
-            color: C.textPrimary, fontFamily: grotesk, fontSize: 13,
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>📝 Download Markdown</button>
+          <a
+            href={getPdfReportUrl(scanData.scan_id)}
+            download
+            style={{
+              height: 40, padding: '0 20px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              background: C.green, color: C.bgPrimary, fontFamily: grotesk, fontWeight: 600, fontSize: 13,
+              display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none',
+            }}
+          >📥 Download PDF</a>
+          <a
+            href={getMarkdownReportUrl(scanData.scan_id)}
+            download
+            style={{
+              height: 40, padding: '0 20px', borderRadius: 6, cursor: 'pointer',
+              background: 'transparent', border: `1px solid ${C.border}`,
+              color: C.textPrimary, fontFamily: grotesk, fontSize: 13,
+              display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none',
+            }}
+          >📝 Download Markdown</a>
           <button
             onClick={onClose}
             style={{
@@ -1409,33 +1551,94 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
   )
 }
 
+// ─── Error Boundary ────────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null }
+  static getDerivedStateFromError(error: Error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 40, fontFamily: "'JetBrains Mono', monospace", color: '#FF3366', background: C.bgPrimary, minHeight: '100vh' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Something went wrong</div>
+          <div style={{ fontSize: 13, color: '#8892A4', marginBottom: 8 }}>{this.state.error.message}</div>
+          <button onClick={() => { this.setState({ error: null }); window.location.reload() }}
+            style={{ fontFamily: 'inherit', fontSize: 12, padding: '8px 16px', background: 'transparent', border: '1px solid #1E2030', color: C.textPrimary, borderRadius: 6, cursor: 'pointer' }}>
+            Reload
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 // ─── App shell ────────────────────────────────────────────────────────────────
 type Screen = 'landing' | 'scanning' | 'results'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('landing')
   const [target, setTarget] = useState('http://localhost:3000')
+  const [scanId, setScanId] = useState<string | null>(null)
+  const [scanData, setScanData] = useState<ScanResult | null>(null)
+  const [findings, setFindings] = useState<Finding[]>([])
+  const [scanError, setScanError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
 
   const navStatus: NavStatus = screen === 'landing' ? 'idle' : screen === 'scanning' ? 'scanning' : 'complete'
 
-  const handleScan = useCallback((url: string) => {
+  const handleScan = useCallback((url: string, id: string) => {
     setTarget(url)
+    setScanId(id)
+    setScanError(null)
     setScreen('scanning')
   }, [])
 
-  const handleScanComplete = useCallback(() => {
+  const handleScanComplete = useCallback((data: ScanResult) => {
+    setScanData(data)
+    setFindings(mapFindings(data.findings))
     setScreen('results')
   }, [])
 
+  const handleCloseModal = useCallback(() => setShowModal(false), [])
+
   return (
-    <div style={{ minHeight: '100vh', background: C.bgPrimary }}>
-      <Background />
-      <Navbar status={navStatus} />
-      {screen === 'landing' && <Landing onScan={handleScan} />}
-      {screen === 'scanning' && <Scanning target={target} onComplete={handleScanComplete} />}
-      {screen === 'results' && <Results target={target} onModal={() => setShowModal(true)} />}
-      {showModal && <PdfModal target={target} onClose={() => setShowModal(false)} />}
-    </div>
+    <ErrorBoundary>
+      <div style={{ minHeight: '100vh', background: C.bgPrimary }}>
+        <Background />
+        <Navbar status={navStatus} />
+        {screen === 'landing' && <Landing onScan={handleScan} />}
+        {screen === 'scanning' && scanId && (
+          <Scanning target={target} scanId={scanId} onComplete={handleScanComplete} />
+        )}
+        {screen === 'scanning' && !scanId && (
+          <div style={{ paddingTop: 64, minHeight: '100vh', background: C.bgPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: mono, fontSize: 13, color: C.muted }}>Invalid scan response from server.</span>
+          </div>
+        )}
+        {screen === 'scanning' && scanError && (
+          <div style={{
+            position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 50,
+            background: 'rgba(255,51,102,0.12)', border: `1px solid ${C.red}`, borderRadius: 8,
+            padding: '12px 20px', fontFamily: mono, fontSize: 13, color: C.red,
+          }}>
+            ⚠ {scanError}
+          </div>
+        )}
+        {screen === 'results' && scanId && (
+          <Results target={target} scanId={scanId} initialData={scanData} onModal={() => setShowModal(true)} />
+        )}
+        {screen === 'results' && !scanId && (
+          <div style={{ paddingTop: 64, minHeight: '100vh', background: C.bgPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: mono, fontSize: 13, color: C.muted }}>No scan data available.</span>
+          </div>
+        )}
+        {showModal && scanData && (
+          <PdfModal target={target} findings={findings} scanData={scanData} onClose={handleCloseModal} />
+        )}
+      </div>
+    </ErrorBoundary>
   )
 }

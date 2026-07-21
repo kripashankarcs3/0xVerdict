@@ -1,0 +1,9 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+aiohttp>=3.10.0
+openai>=1.50.0
+pydantic>=2.8.0
+python-multipart>=0.0.12
+markdown>=3.7
+weasyprint>=62.3
+reportlab>=4.2.0
