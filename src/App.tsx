@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import finalLogo from '@/imports/final_logo.png'
 import type { BackendFinding } from './types'
 import type { ScanResult } from './types/api'
 import { startScan, getScanStatus, getScanResult } from './utils/api'
@@ -116,19 +117,212 @@ interface Finding {
 
 
 // ─── Background ───────────────────────────────────────────────────────────────
-function Background() {
+const MATRIX_CHARS = '\u30a2\u30a4\u30a6\u30a8\u30aa\u30ab\u30ad\u30af\u30b1\u30b3\u30b5\u30b7\u30b9\u30bb\u30bd\u30bf\u30c1\u30c4\u30c6\u30c8\u30ca\u30cb\u30cc\u30cd\u30ce\u30cf\u30d2\u30d5\u30d8\u30db\u30de\u30df\u30e0\u30e1\u30e2\u30e4\u30e6\u30e8\u30e9\u30ea\u30eb\u30ec\u30ed\u30ef\u30f2\u30f30123456789ABCDEF<>{}[]()&%$#@!'
+const HEX_CHARS = '0123456789ABCDEF'
+const BINARY_CHARS = '0101010101010110'
+
+const HACKER_COMMANDS = [
+  'SYS_INIT: LAUNCHING PORT RECON...',
+  'PORT_SCANNING: 80, 443, 8080, 8443',
+  'VULN_CHECK: RUNNING CORE CVE DIAG...',
+  'SQLi: TESTING ENDPOINT /LOGIN...',
+  'XSS: DOM TEST ON /SEARCH?Q=PAYLOAD',
+  'CSP: CONTENT-SECURITY-POLICY ABSENT',
+  'HSTS: HOST HARDENING CHECK INCOMPLETE',
+  'AI_ANALYSIS: PIPELINE STATE ACTIVE',
+  'AI_VERDICT: CONFIRMED SQLi DISCOVERED',
+  'REMEDIATION: EXPORTING SAFE WRAPPERS',
+  'SYS_STATUS: COMPLETED AI RUN v1.0.0',
+]
+
+function HackerStreams({ isDashboard }: { isDashboard?: boolean }) {
+  const doubleList = [...HACKER_COMMANDS, ...HACKER_COMMANDS]
+  return (
+    <div style={{
+      position: 'absolute', top: 0, bottom: 0, width: '100%',
+      overflow: 'hidden', pointerEvents: 'none',
+      maskImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.8) 15%, rgba(0,0,0,0.8) 85%, transparent)',
+      WebkitMaskImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.8) 15%, rgba(0,0,0,0.8) 85%, transparent)',
+    }}>
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 16,
+        animation: 'cyber-scroll-up 18s linear infinite',
+      }}>
+        {doubleList.map((cmd, i) => (
+          <div key={i} style={{
+            fontFamily: mono, fontSize: 9, 
+            color: isDashboard ? 'rgba(0, 255, 136, 0.35)' : 'rgba(0, 255, 136, 0.22)',
+            whiteSpace: 'nowrap', textShadow: isDashboard ? 'none' : '0 0 2px rgba(0,255,136,0.1)',
+          }}>
+            &gt; {cmd}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CyberRadar({ isDashboard }: { isDashboard?: boolean }) {
+  return (
+    <div style={{
+      position: 'absolute', left: '50%', top: isDashboard ? '50%' : '45%',
+      transform: 'translate(-50%, -50%)',
+      width: isDashboard ? 700 : 500, height: isDashboard ? 700 : 500,
+      pointerEvents: 'none', zIndex: 0,
+      animation: 'cyber-pulse-radar 12s ease-in-out infinite',
+      opacity: isDashboard ? 0.18 : 1,
+    }}>
+      {/* Outer rotating ring */}
+      <svg width="100%" height="100%" viewBox="0 0 200 200" style={{ position: 'absolute', inset: 0, animation: 'rotate-hex 45s linear infinite' }}>
+        <circle cx="100" cy="100" r="95" stroke={C.green} strokeWidth="0.5" strokeDasharray="3 8" fill="none" />
+        <circle cx="100" cy="100" r="85" stroke={C.green} strokeWidth="0.3" strokeDasharray="15 5" fill="none" />
+      </svg>
+      {/* Inner counter-rotating ring */}
+      <svg width="100%" height="100%" viewBox="0 0 200 200" style={{ position: 'absolute', inset: 0, animation: 'rotate-hex 25s linear infinite reverse' }}>
+        <circle cx="100" cy="100" r="75" stroke={C.cyan} strokeWidth="0.5" strokeDasharray="8 4 2 4" fill="none" />
+        <path d="M 100 15 L 100 25 M 100 175 L 100 185 M 15 100 L 25 100 M 175 100 L 185 100" stroke={C.cyan} strokeWidth="0.8" fill="none" />
+      </svg>
+      {/* Solid grid accents */}
+      <svg width="100%" height="100%" viewBox="0 0 200 200" style={{ position: 'absolute', inset: 0 }}>
+        <circle cx="100" cy="100" r="45" stroke={C.green} strokeWidth="0.2" fill="none" />
+        <circle cx="100" cy="100" r="2" fill={C.green} />
+        {/* Crosshair */}
+        <line x1="50" y1="100" x2="150" y2="100" stroke={C.green} strokeWidth="0.1" strokeDasharray="2 2" />
+        <line x1="100" y1="50" x2="100" y2="150" stroke={C.green} strokeWidth="0.1" strokeDasharray="2 2" />
+      </svg>
+    </div>
+  )
+}
+
+function Background({ isDashboard }: { isDashboard?: boolean }) {
+  const [matrixCols] = useState(() =>
+    Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      delay: Math.random() * 8,
+      duration: 6 + Math.random() * 8,
+      chars: Array.from({ length: 8 + Math.floor(Math.random() * 12) }, () =>
+        MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)]
+      ),
+    }))
+  )
+
+  const [floating] = useState(() =>
+    Array.from({ length: 6 }, (_, i) => ({
+      id: i,
+      left: 5 + Math.random() * 90,
+      delay: Math.random() * 15,
+      duration: 12 + Math.random() * 10,
+      text: i % 2 === 0
+        ? `${HEX_CHARS[Math.floor(Math.random()*16)]}${HEX_CHARS[Math.floor(Math.random()*16)]}${HEX_CHARS[Math.floor(Math.random()*16)]}`
+        : BINARY_CHARS.slice(0, 4 + Math.floor(Math.random() * 4)),
+      fontSize: 9 + Math.floor(Math.random() * 4),
+    }))
+  )
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
       <div style={{ position: 'absolute', inset: 0, background: C.bgPrimary }} />
-      <div className="dot-grid-bg" style={{ position: 'absolute', inset: 0 }} />
+      <div className={isDashboard ? "dot-grid-bg" : "dot-grid-bg-clean"} style={{ position: 'absolute', inset: 0 }} />
+      
+      {isDashboard ? (
+        <>
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(700px circle at top left, rgba(0,255,136,0.1), transparent)`,
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(500px circle at top right, rgba(0,212,255,0.08), transparent)`,
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(800px circle at bottom center, rgba(0,255,136,0.04), transparent)`,
+          }} />
+        </>
+      ) : (
+        <>
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(900px circle at 50% 40%, rgba(0,255,136,0.09), transparent)`,
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(600px circle at 50% 50%, rgba(0,212,255,0.07), transparent)`,
+          }} />
+        </>
+      )}
+
+      {/* Cyber radar HUD behind center content */}
+      <CyberRadar isDashboard={isDashboard} />
+
+      {/* Cyber text scroll overlays at sides */}
+      {isDashboard && (
+        <>
+          <div style={{ position: 'absolute', left: 24, top: 80, bottom: 80, width: 220 }}>
+            <HackerStreams isDashboard={isDashboard} />
+          </div>
+          <div style={{ position: 'absolute', right: 24, top: 80, bottom: 80, width: 220 }}>
+            <HackerStreams isDashboard={isDashboard} />
+          </div>
+        </>
+      )}
+
+      {/* CRT scan line overlay */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0, right: 0,
+        background: isDashboard 
+          ? 'linear-gradient(180deg, transparent 0%, rgba(0,255,136,0.05) 50%, transparent 100%)'
+          : 'linear-gradient(180deg, transparent 0%, rgba(0,255,136,0.03) 50%, transparent 100%)',
+        height: 4,
+        animation: 'scan-line 7s linear infinite',
+        zIndex: 2,
+      }} />
+
+      {/* Subtle CRT scan lines */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: `radial-gradient(800px circle at 30% 20%, rgba(0,255,136,0.04), transparent)`,
+        background: isDashboard
+          ? 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px)'
+          : 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px)',
+        pointerEvents: 'none',
       }} />
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: `radial-gradient(500px circle at 70% 80%, rgba(0,255,136,0.025), transparent)`,
-      }} />
+
+      {/* Matrix rain columns */}
+      {matrixCols.map(col => (
+        <div
+          key={col.id}
+          style={{
+            position: 'absolute', left: `${col.left}%`, top: 0,
+            animation: `matrix-fall ${col.duration}s linear ${col.delay}s infinite`,
+            fontFamily: mono, fontSize: isDashboard ? 9 : 8, lineHeight: '14px',
+            textAlign: 'center',
+            writingMode: 'vertical-lr',
+            color: isDashboard ? 'rgba(0,255,136,0.12)' : 'rgba(0,255,136,0.04)',
+            textShadow: isDashboard ? '0 0 4px rgba(0,255,136,0.08)' : 'none',
+          }}
+        >
+          {col.chars.join('')}
+        </div>
+      ))}
+
+      {/* Floating hex/binary */}
+      {floating.map(f => (
+        <div
+          key={f.id}
+          style={{
+            position: 'absolute', left: `${f.left}%`,
+            animation: `float-hex ${f.duration}s linear ${f.delay}s infinite`,
+            fontFamily: mono, fontSize: f.fontSize,
+            color: isDashboard
+              ? (f.id % 3 === 0 ? 'rgba(0,255,136,0.08)' : 'rgba(0,212,255,0.08)')
+              : (f.id % 3 === 0 ? 'rgba(0,255,136,0.03)' : 'rgba(0,212,255,0.03)'),
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {f.text}
+        </div>
+      ))}
     </div>
   )
 }
@@ -152,17 +346,12 @@ function Navbar({ status }: { status: NavStatus }) {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 32px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: 'rgba(0,255,136,0.06)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="18" height="20" viewBox="0 0 32 36" fill="none" style={{ display: 'block' }}>
-            <path d="M16 1L2 7V17C2 25.5 8 33 16 35C24 33 30 25.5 30 17V7L16 1Z" fill="rgba(0,255,136,0.12)" stroke="#00FF88" strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M12 18L15 21L20 15" stroke="#00FF88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img
+          src={finalLogo}
+          alt="0xVerdict logo"
+          style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '50%', filter: 'drop-shadow(0 0 8px rgba(0,255,136,0.4))' }}
+        />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 20, letterSpacing: '0.04em' }}>
             <span style={{ color: C.green }}>Ox</span>
@@ -232,26 +421,6 @@ function useTypewriter(text: string, delay = 40, startAfter = 0) {
 }
 
 // ─── Screen 1: Landing ────────────────────────────────────────────────────────
-function ShieldIcon({ visible }: { visible: boolean }) {
-  return (
-    <div style={{
-      display: 'flex', justifyContent: 'center', marginBottom: 36,
-      animation: visible ? 'shield-enter 800ms cubic-bezier(0.16, 1, 0.3, 1) both' : 'none',
-    }}>
-      <div className="shield-glow" style={{
-        width: 72, height: 72, borderRadius: 20,
-        background: 'rgba(0,255,136,0.04)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        animation: visible ? 'shield-glow 4s ease-in-out infinite' : 'none',
-      }}>
-        <svg width="36" height="36" viewBox="0 0 32 36" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-          <path d="M16 1L2 7V17C2 25.5 8 33 16 35C24 33 30 25.5 30 17V7L16 1Z" fill="rgba(0,255,136,0.12)" stroke="#00FF88" strokeWidth="1.5" strokeLinejoin="round" />
-          <path d="M12 18L15 21L20 15" stroke="#00FF88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-    </div>
-  )
-}
 
 function Wordmark({ visible }: { visible: boolean }) {
   return (
@@ -313,8 +482,20 @@ function Landing({ onScan }: { onScan: (url: string, scanId: string) => void }) 
     }}>
       <div style={{ width: '100%', maxWidth: 640, textAlign: 'center' }}>
 
-        {/* Shield Icon */}
-        <ShieldIcon visible={visible} />
+        {/* Logo */}
+        <div style={{
+          display: 'flex', justifyContent: 'center', marginBottom: 28,
+          opacity: visible ? 1 : 0, transition: 'opacity 400ms 100ms',
+        }}>
+          <img
+            src={finalLogo}
+            alt="0xVerdict \u2014 AI-Powered Web Vulnerability Analysis"
+            style={{
+              width: 120, height: 120, objectFit: 'cover', borderRadius: '50%',
+              filter: 'drop-shadow(0 0 24px rgba(0,255,136,0.35)) drop-shadow(0 0 48px rgba(0,255,136,0.15))',
+            }}
+          />
+        </div>
 
         {/* Wordmark */}
         <Wordmark visible={visible} />
@@ -1077,7 +1258,6 @@ function Results({ target, scanId, initialData, onModal }: {
 }) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [selected, setSelected] = useState<Finding | null>(null)
-  const [hovered, setHovered] = useState<string | null>(null)
   const [loading, setLoading] = useState(initialData === null)
   const [entering, setEntering] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1182,8 +1362,8 @@ function Results({ target, scanId, initialData, onModal }: {
     <div style={{ paddingTop: 64, minHeight: '100vh', position: 'relative', zIndex: 1 }}>
       {/* Summary bar */}
       <div style={{
-        background: C.bgSecondary, borderBottom: `1px solid ${C.border}`,
-        height: 80, display: 'flex', alignItems: 'center',
+        background: 'rgba(15, 15, 26, 0.85)', borderBottom: `1px solid ${C.border}`,
+        height: 56, display: 'flex', alignItems: 'center',
       }}>
         {[
           { label: 'TARGET', value: target, color: C.cyan, mono: true },
@@ -1216,11 +1396,23 @@ function Results({ target, scanId, initialData, onModal }: {
 
       {/* Main content */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '65% 35%', gap: 0,
-        height: 'calc(100vh - 64px - 80px)',
+        display: 'grid',
+        gridTemplateColumns: 'calc(65% - 8px) calc(35% - 8px)',
+        gap: 16,
+        height: 'calc(100vh - 64px - 56px - 24px)',
+        padding: '0 24px 24px',
+        overflow: 'hidden',
       }}>
         {/* Left: findings */}
-        <div style={{ display: 'flex', flexDirection: 'column', borderRight: `1px solid ${C.border}` }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          border: `1px solid ${C.border}`,
+          borderRadius: 8,
+          background: 'rgba(10, 10, 15, 0.72)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          overflow: 'hidden',
+        }}>
           {/* Header row */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -1230,21 +1422,28 @@ function Results({ target, scanId, initialData, onModal }: {
               VULNERABILITY FINDINGS
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
-              {filters.map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setFilter(f.key)}
-                  style={{
-                    fontFamily: mono, fontSize: 10, padding: '4px 10px', borderRadius: 4,
-                    cursor: 'pointer', border: `1px solid ${filter === f.key ? C.green : C.border}`,
-                    background: filter === f.key ? C.green : 'transparent',
-                    color: filter === f.key ? C.bgPrimary : C.muted,
-                    transition: 'all 150ms',
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
+              {filters.map(f => {
+                const isActive = filter === f.key
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => setFilter(f.key)}
+                    style={{
+                      fontFamily: mono, fontSize: 9, padding: '5px 12px', borderRadius: 4,
+                      cursor: 'pointer', border: `1px solid ${isActive ? C.green : C.border}`,
+                      background: isActive ? 'rgba(0, 255, 136, 0.08)' : 'transparent',
+                      color: isActive ? C.green : C.muted,
+                      transition: 'all 150ms',
+                      fontWeight: isActive ? 700 : 400,
+                      boxShadow: isActive ? `0 0 8px rgba(0, 255, 136, 0.2)` : 'none',
+                    }}
+                    onMouseEnter={e => { if(!isActive) e.currentTarget.style.borderColor = 'rgba(0, 255, 136, 0.3)' }}
+                    onMouseLeave={e => { if(!isActive) e.currentTarget.style.borderColor = C.border }}
+                  >
+                    {isActive ? `[ ${f.label} ]` : f.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -1262,39 +1461,38 @@ function Results({ target, scanId, initialData, onModal }: {
           </div>
 
           {/* Table rows */}
-          <div style={{ overflowY: 'auto', flex: 1 }}>
+          <div className="cyber-scroll" style={{ overflowY: 'auto', flex: 1 }}>
             {filtered.map((f, i) => {
               const isSelected = selected?.id === f.id
-              const isHovered = hovered === f.id
               return (
                 <div
                   key={f.id}
-                  className="finding-row-enter"
+                  className={`finding-row-enter cyber-row ${isSelected ? 'cyber-row-active' : ''}`}
                   onClick={() => setSelected(isSelected ? null : f)}
-                  onMouseEnter={() => setHovered(f.id)}
-                  onMouseLeave={() => setHovered(null)}
                   style={{
                     display: 'grid', gridTemplateColumns: '80px 1fr 90px 160px 110px 120px',
-                    padding: '0 24px', height: 52, alignItems: 'center',
+                    padding: '0 24px', height: 48, alignItems: 'center',
                     cursor: 'pointer', position: 'relative',
-                    background: isSelected ? C.bgTertiary : isHovered ? '#0d0d18' : 'transparent',
                     borderBottom: `1px solid ${C.border}`,
-                    opacity: f.verdict === 'fp' ? 0.6 : 1,
-                    animationDelay: `${i * 80}ms`,
-                    transition: 'background 150ms',
+                    opacity: f.verdict === 'fp' ? 0.55 : 1,
+                    animationDelay: `${i * 60}ms`,
                   }}
                 >
                   {/* Left accent bar */}
-                  {(isSelected || isHovered) && (
-                    <div style={{
-                      position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-                      background: isSelected ? C.green : C.muted,
-                      borderRadius: '0 2px 2px 0',
-                    }} />
-                  )}
+                  <div style={{
+                    position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+                    background: f.severity === 'critical' ? C.red
+                              : f.severity === 'high' ? C.orange
+                              : f.severity === 'medium' ? C.purple
+                              : C.muted,
+                    borderRadius: '0 2px 2px 0',
+                    boxShadow: isSelected 
+                      ? `0 0 8px ${f.severity === 'critical' ? C.red : f.severity === 'high' ? C.orange : f.severity === 'medium' ? C.purple : C.muted}`
+                      : 'none',
+                  }} />
                   <span style={{ fontFamily: mono, fontSize: 11, color: C.muted }}>{f.id}</span>
                   <span style={{ fontFamily: inter, fontWeight: 600, fontSize: 13, color: C.textPrimary }}>{f.type}</span>
-                  <span style={{ fontFamily: mono, fontSize: 12, color: C.cyan }}>{f.endpoint}</span>
+                  <span style={{ fontFamily: mono, fontSize: 11, color: C.cyan }}>{f.endpoint}</span>
                   <VerdictBadge verdict={f.verdict} />
                   <SeverityBadge severity={f.severity} />
                   <PriorityBadge priority={f.priority} />
@@ -1305,7 +1503,15 @@ function Results({ target, scanId, initialData, onModal }: {
         </div>
 
         {/* Right: AI panel */}
-        <div style={{ padding: '20px 20px 20px 20px', overflowY: 'auto' }}>
+        <div className="cyber-scroll" style={{
+          padding: '20px',
+          overflowY: 'auto',
+          border: `1px solid ${C.border}`,
+          borderRadius: 8,
+          background: 'rgba(15, 15, 26, 0.78)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+        }}>
           <AIPanel
             finding={selected}
             onDownloadPdf={onModal}
@@ -1369,17 +1575,11 @@ function PdfModal({ target, findings, scanData, onClose }: {
             {/* Cover page */}
             <div style={{ background: '#08090D', padding: '48px 56px', minHeight: 480 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 48 }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: 12,
-                  background: 'rgba(0,255,136,0.06)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <svg width="24" height="26" viewBox="0 0 32 36" fill="none" style={{ display: 'block' }}>
-                    <path d="M16 1L2 7V17C2 25.5 8 33 16 35C24 33 30 25.5 30 17V7L16 1Z" fill="rgba(0,255,136,0.12)" stroke="#00FF88" strokeWidth="1.5" strokeLinejoin="round" />
-                    <path d="M12 18L15 21L20 15" stroke="#00FF88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
+                <img
+                  src={finalLogo}
+                  alt="0xVerdict"
+                  style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '50%', filter: 'drop-shadow(0 0 12px rgba(0,255,136,0.5))' }}
+                />
                 <div>
                   <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 26, color: '#F5F7FA', letterSpacing: '0.04em' }}>
                     <span style={{ color: '#00FF88' }}>Ox</span>Verdict
@@ -1607,7 +1807,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div style={{ minHeight: '100vh', background: C.bgPrimary }}>
-        <Background />
+        <Background isDashboard={screen === 'results'} />
         <Navbar status={navStatus} />
         {screen === 'landing' && <Landing onScan={handleScan} />}
         {screen === 'scanning' && scanId && (
