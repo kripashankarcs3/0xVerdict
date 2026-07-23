@@ -1,0 +1,172 @@
+import type { Finding } from './types'
+
+export const C = {
+  bgPrimary: '#0A0A0F',
+  bgSecondary: '#0F0F1A',
+  bgTertiary: '#13131F',
+  bgInput: '#080810',
+  green: '#00FF88',
+  cyan: '#00D4FF',
+  red: '#FF3366',
+  orange: '#FFB800',
+  purple: '#7B61FF',
+  muted: '#8892A4',
+  textPrimary: '#F0F0F0',
+  border: '#1E2030',
+  borderStrong: '#2A2D45',
+}
+
+export const FONT = {
+  mono: "'JetBrains Mono', monospace",
+  grotesk: "'Space Grotesk', sans-serif",
+  inter: "'Inter', sans-serif",
+}
+
+export const MOTION = {
+  duration: { fast: 100, normal: 150, moderate: 250, slow: 400, xslow: 700 },
+  easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  stagger: { quick: 60, normal: 100, relaxed: 180 },
+}
+
+export const MATRIX_CHARS = '\u30a2\u30a4\u30a6\u30a8\u30aa\u30ab\u30ad\u30af\u30b1\u30b3\u30b5\u30b7\u30b9\u30bb\u30bd\u30bf\u30c1\u30c4\u30c6\u30c8\u30ca\u30cb\u30cc\u30cd\u30ce\u30cf\u30d2\u30d5\u30d8\u30db\u30de\u30df\u30e0\u30e1\u30e2\u30e4\u30e6\u30e8\u30e9\u30ea\u30eb\u30ec\u30ed\u30ef\u30f2\u30f30123456789ABCDEF<>{}[]()&%$#@!'
+export const HEX_CHARS = '0123456789ABCDEF'
+export const BINARY_CHARS = '0101010101010110'
+
+export const HACKER_COMMANDS = [
+  'SYS_INIT: LAUNCHING PORT RECON...',
+  'PORT_SCANNING: 80, 443, 8080, 8443',
+  'VULN_CHECK: RUNNING CORE CVE DIAG...',
+  'SQLi: TESTING ENDPOINT /LOGIN...',
+  'XSS: DOM TEST ON /SEARCH?Q=PAYLOAD',
+  'CSP: CONTENT-SECURITY-POLICY ABSENT',
+  'HSTS: HOST HARDENING CHECK INCOMPLETE',
+  'AI_ANALYSIS: PIPELINE STATE ACTIVE',
+  'AI_VERDICT: CONFIRMED SQLi DISCOVERED',
+  'REMEDIATION: EXPORTING SAFE WRAPPERS',
+  'SYS_STATUS: COMPLETED AI RUN v1.0.0',
+]
+
+export const TERMINAL_LINES = [
+  { text: '> Initializing reconnaissance engine...', color: C.muted, bold: false },
+  { text: '> Target: http://localhost:3000', color: C.cyan, bold: false },
+  { text: '', color: '', bold: false },
+  { text: '> [RECON] Crawling homepage...', color: C.muted, bold: false },
+  { text: '> [RECON] Found 14 internal links', color: C.green, bold: false },
+  { text: '> [RECON] Detecting HTML forms...', color: C.muted, bold: false },
+  { text: '> [RECON] 3 forms discovered:', color: C.green, bold: false },
+  { text: '  /login    [POST] username, password', color: C.muted, bold: false },
+  { text: '  /search   [GET]  q', color: C.muted, bold: false },
+  { text: '  /register [POST] email, pass, confirm', color: C.muted, bold: false },
+  { text: '> [RECON] Collecting HTTP headers...', color: C.muted, bold: false },
+  { text: '> [RECON] Headers collected: 8 entries', color: C.green, bold: false },
+  { text: '', color: '', bold: false },
+  { text: '> [SCANNER] Running Security Header checks...', color: C.orange, bold: false },
+  { text: '> [SCANNER] Missing: Content-Security-Policy', color: C.orange, bold: false },
+  { text: '> [SCANNER] Missing: X-Frame-Options', color: C.orange, bold: false },
+  { text: '> [SCANNER] Missing: HSTS', color: C.orange, bold: false },
+  { text: '', color: '', bold: false },
+  { text: '> [SCANNER] Initializing SQL Injection tests...', color: C.orange, bold: false },
+  { text: '> [SCANNER] Testing /login \u2192 username param...', color: C.orange, bold: false },
+  { text: "> [SCANNER] Payload: ' OR 1=1--", color: C.orange, bold: false },
+  { text: '> [!!] SQL ERROR DETECTED at /login', color: C.red, bold: true },
+  { text: '> [!!] Evidence: MySQL syntax error near OR 1=1...', color: C.red, bold: false },
+  { text: '', color: '', bold: false },
+  { text: '> [SCANNER] Initializing XSS tests...', color: C.orange, bold: false },
+  { text: '> [SCANNER] Testing /search \u2192 q param...', color: C.orange, bold: false },
+  { text: '> [SCANNER] Payload: <script>alert(1)</script>', color: C.orange, bold: false },
+  { text: '> [!!] XSS REFLECTION DETECTED at /search', color: C.red, bold: true },
+  { text: '', color: '', bold: false },
+  { text: '> [AI ENGINE] Packaging raw findings...', color: C.cyan, bold: false },
+  { text: '> [AI ENGINE] Sending to AI Verdict Engine...', color: C.cyan, bold: false },
+  { text: '> [AI ENGINE] Analyzing 5 findings...', color: C.cyan, bold: false },
+  { text: '> [AI ENGINE] Processing...', color: C.cyan, bold: false },
+  { text: '  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2591\u2591\u2591\u2591  80%', color: C.cyan, bold: false },
+]
+
+export const FINDINGS: Finding[] = [
+  {
+    id: 'vuln_001', type: 'SQL Injection', endpoint: '/login',
+    verdict: 'confirmed', severity: 'critical', scannerSeverity: 'HIGH', aiSeverity: 'CRITICAL',
+    priority: 'immediate', confidence: 'HIGH',
+    priorityReason: 'Direct database compromise possible via auth bypass.',
+    confidenceReason: 'Database returned explicit SQL syntax error directly tied to input.',
+    rootCause: 'User data directly concatenated into raw SQL string.',
+    devExplanation: 'The payload broke the SQL query structure, altering backend behavior to return all user records.',
+    fixRecommendation: 'Use parameterized queries or ORM binding.',
+    remediationCode: "const sql = 'SELECT * FROM users WHERE username = ?';\ndb.query(sql, [userInput]);",
+    manualSteps: [
+      'Intercept the request using browser DevTools Network tab.',
+      "Append the payload ' OR 1=1-- to the username parameter.",
+      'Submit and check response for SQL exception message.',
+    ],
+    priorityNote: 'Fix this before XSS and header issues — direct data exposure risk.',
+  },
+  {
+    id: 'vuln_002', type: 'Reflected XSS', endpoint: '/search',
+    verdict: 'confirmed', severity: 'high', scannerSeverity: 'HIGH', aiSeverity: 'HIGH',
+    priority: 'high', confidence: 'HIGH',
+    priorityReason: 'Reflected XSS can steal session tokens and credentials.',
+    confidenceReason: 'Script tag reflected verbatim in response body without encoding.',
+    rootCause: 'User input rendered directly in HTML response without escaping.',
+    devExplanation: 'The search query parameter is embedded in the page response without sanitization, allowing script injection.',
+    fixRecommendation: 'Encode all user-supplied data before rendering in HTML context.',
+    remediationCode: "const safe = encodeURIComponent(userInput);\nres.send(`<p>${safe}</p>`);",
+    manualSteps: [
+      'Navigate to /search?q=<script>alert(1)</script>',
+      'Observe if the alert dialog executes in the browser.',
+      'Check page source for unescaped script tag in response.',
+    ],
+    priorityNote: 'Address after SQL Injection — session theft risk remains significant.',
+  },
+  {
+    id: 'vuln_003', type: 'Missing Content-Security-Policy', endpoint: '/',
+    verdict: 'confirmed', severity: 'medium', scannerSeverity: 'MEDIUM', aiSeverity: 'MEDIUM',
+    priority: 'normal', confidence: 'HIGH',
+    priorityReason: 'CSP absence enables broader XSS attack surface.',
+    confidenceReason: 'HTTP response headers confirmed absence of CSP directive.',
+    rootCause: 'Server configuration does not set Content-Security-Policy header.',
+    devExplanation: 'Without CSP, browsers have no restrictions on script execution sources.',
+    fixRecommendation: 'Add Content-Security-Policy header in server middleware.',
+    remediationCode: "app.use((req, res, next) => {\n  res.setHeader('Content-Security-Policy',\n    \"default-src 'self'\");\n  next();\n});",
+    manualSteps: [
+      'Open DevTools → Network tab → select any page response.',
+      'Check Response Headers for Content-Security-Policy.',
+      'Confirm it is absent in the current implementation.',
+    ],
+    priorityNote: 'Implement as part of a security header hardening pass.',
+  },
+  {
+    id: 'vuln_004', type: 'Missing HSTS', endpoint: '/',
+    verdict: 'verify', severity: 'low', scannerSeverity: 'LOW', aiSeverity: 'LOW',
+    priority: 'low', confidence: 'MEDIUM',
+    priorityReason: 'HSTS absence may allow protocol downgrade on public networks.',
+    confidenceReason: 'Testing on localhost — HSTS is typically not applicable to local environments.',
+    rootCause: 'Strict-Transport-Security header not configured in server response.',
+    devExplanation: 'HSTS forces HTTPS connections, preventing protocol downgrade attacks.',
+    fixRecommendation: 'Add HSTS header in production HTTPS configuration only.',
+    remediationCode: "app.use((req, res, next) => {\n  res.setHeader('Strict-Transport-Security',\n    'max-age=31536000; includeSubDomains');\n  next();\n});",
+    manualSteps: [
+      'Test against a production HTTPS endpoint, not localhost.',
+      'Check for Strict-Transport-Security in response headers.',
+      'Verify max-age value meets minimum 1-year requirement.',
+    ],
+    priorityNote: 'Verify in production environment — likely a false positive on localhost.',
+  },
+  {
+    id: 'vuln_005', type: 'Reflected XSS', endpoint: '/register',
+    verdict: 'fp', severity: 'medium', scannerSeverity: 'MEDIUM', aiSeverity: 'LOW',
+    priority: 'low', confidence: 'LOW',
+    priorityReason: 'Payload was not reflected — likely framework auto-encoding.',
+    confidenceReason: 'Modern framework auto-escapes template output, no reflection observed.',
+    rootCause: 'Scanner triggered on parameter presence, not actual reflection.',
+    devExplanation: 'The registration form uses a framework that auto-escapes all template variables.',
+    fixRecommendation: 'No action required — framework encoding provides sufficient protection.',
+    remediationCode: "// Framework handles escaping automatically\n// Verify template engine version is up to date",
+    manualSteps: [
+      'Manually test /register with XSS payload in each field.',
+      'Verify all payloads are properly escaped in response.',
+      'Confirm framework version has no known encoding bypass.',
+    ],
+    priorityNote: 'False positive — scanner triggered on parameter; framework protects output.',
+  },
+]

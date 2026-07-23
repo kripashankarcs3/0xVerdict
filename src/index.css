@@ -11,11 +11,6 @@
   100% { background-position: 0 192px, 24px 24px, 12px 12px; }
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
 @keyframes pulse-dot {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.5); opacity: 0.5; }
@@ -24,11 +19,6 @@
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
-}
-
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fade-slide-up {
@@ -41,24 +31,9 @@
   to { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes glow-flash {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.04); }
-}
-
-@keyframes strikethrough {
-  from { width: 0%; }
-  to { width: 100%; }
-}
-
 @keyframes rotate-hex {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-@keyframes typewriter-cursor {
-  0%, 100% { border-color: #00FF88; }
-  50% { border-color: transparent; }
 }
 
 @keyframes scan-line {
@@ -99,11 +74,6 @@
   50% { box-shadow: 0 0 8px rgba(0,255,136,0.6), 0 0 16px rgba(0,255,136,0.2); }
 }
 
-@keyframes blink-green {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
 @keyframes glitch-text {
   0%, 100% { text-shadow: none; }
   92% { text-shadow: none; }
@@ -111,6 +81,16 @@
   94% { text-shadow: -2px 0 #FF3366, 1px 0 #00D4FF; }
   95% { text-shadow: 2px 0 #FF3366, -1px 0 #00D4FF; }
   96% { text-shadow: none; }
+}
+
+@keyframes summary-stat-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pdf-modal-enter {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .glitch-text span {
@@ -159,10 +139,6 @@ html, body {
 
 input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
 
-.cursor-blink {
-  animation: blink 1s step-end infinite;
-}
-
 .dot-grid-bg {
   background-image:
     radial-gradient(circle, rgba(0, 255, 136, 0.22) 1.2px, transparent 1.2px),
@@ -172,6 +148,7 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
   background-position: 0 0, 24px 24px, 12px 12px;
   opacity: 0.38;
   animation: drift-down 25s linear infinite;
+  will-change: background-position;
 }
 
 .dot-grid-bg-clean {
@@ -182,6 +159,7 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
   background-position: 0 0, 16px 16px;
   opacity: 0.42;
   animation: drift-down 40s linear infinite;
+  will-change: background-position;
 }
 
 .pulse-dot {
@@ -206,12 +184,21 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
   animation: slide-in-right 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.verdict-text {
-  animation: glow-flash 300ms ease-out;
-}
-
 .finding-row-enter {
   animation: fade-slide-up 250ms ease-out both;
+}
+
+.summary-stat-enter {
+  animation: summary-stat-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pdf-modal-enter {
+  animation: pdf-modal-enter 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.badge-micro:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(0,0,0,0.3);
 }
 
 /* ─── Cursor Follower ──────────────────────────────────────────────────── */
@@ -324,4 +311,35 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
 @keyframes cyber-pulse-radar {
   0%, 100% { transform: scale(1); opacity: 0.12; filter: drop-shadow(0 0 5px rgba(0, 255, 136, 0.2)); }
   50% { transform: scale(1.05); opacity: 0.22; filter: drop-shadow(0 0 15px rgba(0, 255, 136, 0.5)); }
+}
+
+/* ─── Keyboard focus states ────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(0, 255, 136, 0.6);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Accessibility: Reduced Motion ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Accessibility: High Contrast ─────────────────────────────── */
+@media (prefers-contrast: more) {
+  .glitch-text span { text-shadow: none !important; }
+  .hover-card:hover { border-color: #00FF88 !important; }
 }

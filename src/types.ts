@@ -74,3 +74,28 @@ export interface ScanListItem {
   scan_status: ScanStatus
   summary: ScanSummary
 }
+
+export interface Finding {
+  id: string
+  type: string
+  endpoint: string
+  verdict: 'confirmed' | 'verify' | 'fp'
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  scannerSeverity: string
+  aiSeverity: string
+  priority: 'immediate' | 'high' | 'normal' | 'low'
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  priorityReason: string
+  confidenceReason: string
+  rootCause: string
+  devExplanation: string
+  fixRecommendation: string
+  remediationCode: string
+  manualSteps: string[]
+  priorityNote: string
+}
+
+export type NavStatus = 'idle' | 'scanning' | 'complete'
+export type AIStatus = 'active' | 'thinking' | 'idle'
+export type Screen = 'landing' | 'scanning' | 'results'
+export type FilterType = 'all' | 'confirmed' | 'verify' | 'fp'
