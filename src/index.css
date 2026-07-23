@@ -170,7 +170,7 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
     radial-gradient(circle, #2A2D45 0.5px, transparent 0.5px);
   background-size: 48px 48px, 24px 24px, 12px 12px;
   background-position: 0 0, 24px 24px, 12px 12px;
-  opacity: 0.2;
+  opacity: 0.38;
   animation: drift-down 25s linear infinite;
 }
 
@@ -180,7 +180,7 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
     radial-gradient(circle, #1E2030 0.8px, transparent 0.8px);
   background-size: 32px 32px, 16px 16px;
   background-position: 0 0, 16px 16px;
-  opacity: 0.22;
+  opacity: 0.42;
   animation: drift-down 40s linear infinite;
 }
 
