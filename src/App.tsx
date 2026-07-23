@@ -272,6 +272,17 @@ function Background({ isDashboard }: { isDashboard: boolean }) {
     }))
   )
 
+  const [hackerNodes] = useState(() =>
+    Array.from({ length: 16 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      size: 2 + Math.random() * 4,
+      delay: Math.random() * 6,
+      duration: 3 + Math.random() * 5,
+    }))
+  )
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
       <div style={{ position: 'absolute', inset: 0, background: C.bgPrimary }} />
@@ -307,6 +318,27 @@ function Background({ isDashboard }: { isDashboard: boolean }) {
 
       {/* Cyber radar HUD behind center content */}
       <CyberRadar isDashboard={isDashboard} />
+
+      {/* Blinking hacker node particles */}
+      {hackerNodes.map(node => (
+        <div
+          key={node.id}
+          className="pulse-dot"
+          style={{
+            position: 'absolute',
+            left: `${node.left}%`,
+            top: `${node.top}%`,
+            width: node.size,
+            height: node.size,
+            borderRadius: '50%',
+            background: node.id % 2 === 0 ? C.green : C.cyan,
+            boxShadow: `0 0 10px ${node.id % 2 === 0 ? C.green : C.cyan}`,
+            opacity: isDashboard ? 0.35 : 0.22,
+            animationDelay: `${node.delay}s`,
+            animationDuration: `${node.duration}s`,
+          }}
+        />
+      ))}
 
       {/* Cyber text scroll overlays at sides */}
       <>
