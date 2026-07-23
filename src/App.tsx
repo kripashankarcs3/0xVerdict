@@ -273,13 +273,12 @@ function Background({ isDashboard }: { isDashboard: boolean }) {
   )
 
   const [hackerNodes] = useState(() =>
-    Array.from({ length: 16 }, (_, i) => ({
+    Array.from({ length: 22 }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
-      top: Math.random() * 100,
-      size: 2 + Math.random() * 4,
-      delay: Math.random() * 6,
-      duration: 3 + Math.random() * 5,
+      size: 3 + Math.random() * 4,
+      delay: Math.random() * 15,
+      duration: 15 + Math.random() * 15,
     }))
   )
 
@@ -319,23 +318,22 @@ function Background({ isDashboard }: { isDashboard: boolean }) {
       {/* Cyber radar HUD behind center content */}
       <CyberRadar isDashboard={isDashboard} />
 
-      {/* Blinking hacker node particles */}
+      {/* Floating hacker dot particles */}
       {hackerNodes.map(node => (
         <div
           key={node.id}
-          className="pulse-dot"
           style={{
             position: 'absolute',
             left: `${node.left}%`,
-            top: `${node.top}%`,
             width: node.size,
             height: node.size,
             borderRadius: '50%',
             background: node.id % 2 === 0 ? C.green : C.cyan,
             boxShadow: `0 0 10px ${node.id % 2 === 0 ? C.green : C.cyan}`,
-            opacity: isDashboard ? 0.35 : 0.22,
-            animationDelay: `${node.delay}s`,
-            animationDuration: `${node.duration}s`,
+            opacity: isDashboard ? 0.32 : 0.2,
+            animation: `float-hex ${node.duration}s linear ${node.delay}s infinite`,
+            pointerEvents: 'none',
+            zIndex: 1,
           }}
         />
       ))}
@@ -461,7 +459,7 @@ function Navbar({ status, aiStatus }: { status: NavStatus; aiStatus: AIStatus })
           </div>
           <div style={{ fontFamily: mono, fontSize: 10, color: C.muted, display: 'flex', alignItems: 'center', gap: 2 }}>
             &gt; AI Security Analyst
-            <span style={{ color: C.green, opacity: cursorOn ? 1 : 0, transition: 'opacity 50ms' }}>\u258b</span>
+            <span style={{ color: C.green, opacity: cursorOn ? 1 : 0, transition: 'opacity 50ms' }}>▋</span>
           </div>
         </div>
       </div>
@@ -617,7 +615,7 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
           minHeight: 18,
         }}>
           <span>{displayed}</span>
-          <span style={{ opacity: displayed.length >= preTitleText.length ? (cursorOn ? 1 : 0) : 1, color: C.green }}>\u258b</span>
+          <span style={{ opacity: displayed.length >= preTitleText.length ? (cursorOn ? 1 : 0) : 1, color: C.green }}>▋</span>
         </div>
 
         {/* Main headline */}
@@ -652,13 +650,13 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
           <div className="hover-card" style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: 8, padding: '16px', textAlign: 'center' }}>
             <div style={{ fontSize: 20, marginBottom: 8 }}>🔍</div>
             <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 13, color: C.muted, marginBottom: 6 }}>Traditional Scanner</div>
-            <div style={{ fontFamily: inter, fontSize: 12, color: C.red }}>Raw findings \u2192 Developer confused</div>
+            <div style={{ fontFamily: inter, fontSize: 12, color: C.red }}>Raw findings → Developer confused</div>
           </div>
-          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 32, color: C.green }}>\u2192</div>
+          <div style={{ fontFamily: grotesk, fontWeight: 700, fontSize: 32, color: C.green }}>→</div>
           <div className="hover-card" style={{ background: 'rgba(0,255,136,0.04)', border: `1px solid rgba(0,255,136,0.2)`, borderRadius: 8, padding: '16px', textAlign: 'center' }}>
             <div style={{ fontSize: 20, marginBottom: 8 }}>🤖</div>
             <div style={{ fontFamily: grotesk, fontWeight: 600, fontSize: 13, color: C.textPrimary, marginBottom: 6 }}>0xVerdict</div>
-            <div style={{ fontFamily: inter, fontSize: 12, color: C.green }}>AI Verdict \u2192 Root Cause \u2192 Fix \u2192 Report</div>
+            <div style={{ fontFamily: inter, fontSize: 12, color: C.green }}>AI Verdict → Root Cause → Fix → Report</div>
           </div>
         </div>
 
@@ -704,7 +702,7 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
               }}
               data-hover="true"
             >
-              SCAN \u25b6
+              SCAN ▶
             </button>
           </div>
 
@@ -823,7 +821,7 @@ function Landing({ onScan }: { onScan: (url: string) => void }) {
         opacity: visible ? 1 : 0, transition: 'opacity 300ms 1500ms',
       }}>
         <p style={{ fontFamily: inter, fontSize: 10, color: C.muted, lineHeight: 1.4, maxWidth: 800, margin: '0 auto' }}>
-          \u26A0 NOTICE: This tool is intended exclusively for authorized security testing environments. Unauthorized scanning violates global cyber defense frameworks. Authors assume no liability for misuse.
+          ⚠ NOTICE: This tool is intended exclusively for authorized security testing environments. Unauthorized scanning violates global cyber defense frameworks. Authors assume no liability for misuse.
         </p>
       </div>
     </div>
@@ -1020,7 +1018,7 @@ function Scanning({ target, onComplete }: { target: string; onComplete: () => vo
                       background: step.state === 'complete' ? 'rgba(0,255,136,0.1)' : step.state === 'active' ? 'rgba(255,184,0,0.1)' : C.bgTertiary,
                       border: `1px solid ${step.state === 'complete' ? C.green : step.state === 'active' ? C.orange : C.border}`,
                     }}>
-                      {step.state === 'complete' && <span style={{ color: C.green, fontSize: 12 }}>\u2713</span>}
+                      {step.state === 'complete' && <span style={{ color: C.green, fontSize: 12 }}>✓</span>}
                       {step.state === 'active' && <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: C.orange }} />}
                       {step.state === 'waiting' && <div style={{ width: 8, height: 8, borderRadius: '50%', border: `1px solid ${C.border}` }} />}
                     </div>
@@ -1716,7 +1714,7 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
             onMouseEnter={e => (e.currentTarget.style.color = C.red)}
             onMouseLeave={e => (e.currentTarget.style.color = C.muted)}
           >
-            \u2715 Close
+            ✕ Close
           </button>
         </div>
 
