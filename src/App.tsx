@@ -1857,23 +1857,37 @@ function PdfModal({ target, onClose }: { target: string; onClose: () => void }) 
 
 // ─── Cursor Follower ──────────────────────────────────────────────────────────
 function CursorFollower() {
+  const posRef = useRef({ x: -100, y: -100 })
+  const targetRef = useRef({ x: -100, y: -100 })
   const [pos, setPos] = useState({ x: -100, y: -100 })
-  const [target, setTarget] = useState({ x: -100, y: -100 })
   const [hovered, setHovered] = useState(false)
   const rafRef = useRef<number>(0)
 
   useEffect(() => {
     const handleMouse = (e: MouseEvent) => {
-      setTarget({ x: e.clientX, y: e.clientY })
+      targetRef.current = { x: e.clientX, y: e.clientY }
     }
     const handleOver = (e: MouseEvent) => {
       const t = (e.target as HTMLElement)
       if (t.closest('button, a, input, [data-hover]')) setHovered(true)
     }
     const handleOut = () => setHovered(false)
+
+    const animate = () => {
+      const prev = posRef.current
+      const tgt = targetRef.current
+      posRef.current = {
+        x: prev.x + (tgt.x - prev.x) * 0.8,
+        y: prev.y + (tgt.y - prev.y) * 0.8,
+      }
+      setPos(posRef.current)
+      rafRef.current = requestAnimationFrame(animate)
+    }
+
     window.addEventListener('mousemove', handleMouse)
     window.addEventListener('mouseover', handleOver)
     window.addEventListener('mouseout', handleOut)
+    rafRef.current = requestAnimationFrame(animate)
     return () => {
       window.removeEventListener('mousemove', handleMouse)
       window.removeEventListener('mouseover', handleOver)
@@ -1881,18 +1895,6 @@ function CursorFollower() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [])
-
-  useEffect(() => {
-    const animate = () => {
-      setPos(p => ({
-        x: p.x + (target.x - p.x) * 0.35,
-        y: p.y + (target.y - p.y) * 0.35,
-      }))
-      rafRef.current = requestAnimationFrame(animate)
-    }
-    rafRef.current = requestAnimationFrame(animate)
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [target])
 
   return (
     <>
