@@ -161,11 +161,33 @@ class ChatRequest(BaseModel):
     message: str
 
 
+from typing import Optional
+from fastapi import Header
+
 @app.post("/chat")
-async def chat_with_ai(request: ChatRequest):
+async def chat_with_ai(request: ChatRequest, authorization: Optional[str] = Header(None)):
     """Interact directly with VerdictAI security analyst."""
+    api_key = None
+    if authorization and authorization.startswith("Bearer "):
+        api_key = authorization.split("Bearer ", 1)[1].strip()
+
+    if not api_key:
+        from engines.ai_orchestrator import OPENROUTER_API_KEY
+        api_key = OPENROUTER_API_KEY
+
+    # Check if key is empty or dummy
+    if not api_key or api_key.startswith("YOUR_") or api_key == "":
+        return {"error": "API_KEY_MISSING", "response": "API Key not configured. Please add your OpenRouter API key."}
+
     try:
-        from engines.ai_orchestrator import client, OPENROUTER_MODEL
+        from openai import AsyncOpenAI
+        from engines.ai_orchestrator import OPENROUTER_MODEL, OPENROUTER_BASE_URL
+        
+        dynamic_client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=OPENROUTER_BASE_URL,
+        )
+        
         system_prompt = (
             "You are VerdictAI, an advanced Tier-3 security analyst AI assistant. "
             "You help developers fix web application vulnerabilities, understand exploits, "
@@ -173,7 +195,7 @@ async def chat_with_ai(request: ChatRequest):
             "and format secure code fixes in markdown block scopes. Keep responses concise "
             "and style-themed like a terminal response."
         )
-        response = await client.chat.completions.create(
+        response = await dynamic_client.chat.completions.create(
             model=OPENROUTER_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},

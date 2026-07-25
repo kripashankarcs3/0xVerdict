@@ -19,6 +19,11 @@ export default function AIChat() {
   const [loading, setLoading] = useState(false)
   const feedRef = useRef<HTMLDivElement>(null)
 
+  // Local Storage API Key Management
+  const [apiKey, setApiKey] = useState(localStorage.getItem('0xverdict_openrouter_key') || '')
+  const [showKeyModal, setShowKeyModal] = useState(false)
+  const [tempKey, setTempKey] = useState(apiKey)
+
   useEffect(() => {
     if (feedRef.current) {
       feedRef.current.scrollTop = feedRef.current.scrollHeight
@@ -28,6 +33,13 @@ export default function AIChat() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || loading) return
+
+    // Pre-check for API key availability: if there is no key set locally AND no key configured,
+    // we can request it immediately before sending!
+    if (!apiKey) {
+      setShowKeyModal(true)
+      return
+    }
 
     const userMsg: Message = {
       sender: 'user',
@@ -40,15 +52,34 @@ export default function AIChat() {
     setLoading(true)
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`
+      }
+
       const res = await fetch('http://localhost:8000/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ message: prompt })
       })
 
       if (!res.ok) throw new Error('API server returned status error')
       const data = await res.json()
       
+      // If the backend indicates that the API key is missing
+      if (data.error === 'API_KEY_MISSING') {
+        setShowKeyModal(true)
+        // Also put a message back into user input so they don't lose it
+        setInput(prompt)
+        setMessages(prev => [...prev, {
+          sender: 'system',
+          text: 'Authentication Required: Please enter a valid OpenRouter API Key to connect.',
+          timestamp: new Date().toLocaleTimeString()
+        }])
+        setLoading(false)
+        return
+      }
+
       const aiMsg: Message = {
         sender: 'ai',
         text: data.response || 'No response returned from the security AI.',
@@ -110,7 +141,34 @@ export default function AIChat() {
               VERDICTAI_SHELL_v1.0
             </span>
           </div>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>SEC_CONN: ACTIVE</span>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => {
+                setTempKey(apiKey)
+                setShowKeyModal(true)
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: apiKey ? C.green : C.orange,
+                fontFamily: FONT.mono,
+                fontSize: 8,
+                fontWeight: 700,
+                cursor: 'pointer',
+                letterSpacing: '0.04em',
+                transition: 'all 200ms',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              <span>🔑</span>
+              {apiKey ? '[ CUSTOM_KEY: ACTIVE ]' : '[ NO_KEY: CLICK_TO_CONFIG ]'}
+            </button>
+            <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>SEC_CONN: ACTIVE</span>
+          </div>
         </div>
 
         {/* Message Log Feed */}
@@ -274,6 +332,123 @@ export default function AIChat() {
           </button>
         </form>
       </div>
+
+      {/* API Key Modal Popup */}
+      {showKeyModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(5, 5, 8, 0.85)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999,
+        }}>
+          <div style={{
+            background: 'rgba(10, 10, 15, 0.95)',
+            border: `1px solid ${C.green}`,
+            borderRadius: 8,
+            width: '90%',
+            maxWidth: 480,
+            padding: 24,
+            boxShadow: `0 0 30px rgba(0, 255, 136, 0.15)`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.green, letterSpacing: '0.08em' }}>
+                //_CLIENT_AUTHENTICATION_CONFIG
+              </span>
+              <h3 style={{ fontFamily: FONT.grotesk, fontSize: 18, fontWeight: 700, color: C.textPrimary, margin: 0 }}>
+                Configure OpenRouter API Key
+              </h3>
+            </div>
+
+            <p style={{ fontFamily: FONT.inter, fontSize: 11, color: C.muted, lineHeight: 1.4, margin: 0 }}>
+              AI client needs an active OpenRouter API key to route requests. If backend key is missing or you want to override it, enter your custom key below. It is stored safely in your local browser storage.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontFamily: FONT.mono, fontSize: 9, color: C.muted }}>OPENROUTER_API_KEY:</label>
+              <input
+                type="password"
+                value={tempKey}
+                onChange={e => setTempKey(e.target.value)}
+                placeholder="sk-or-v1-..."
+                style={{
+                  background: 'rgba(0,0,0,0.4)',
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 4,
+                  padding: '10px 12px',
+                  color: C.textPrimary,
+                  fontFamily: FONT.mono,
+                  fontSize: 12,
+                  outline: 'none',
+                  transition: 'border-color 150ms'
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = C.green}
+                onBlur={e => e.currentTarget.style.borderColor = C.border}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowKeyModal(false)
+                }}
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${C.border}`,
+                  color: C.muted,
+                  borderRadius: 4,
+                  padding: '8px 16px',
+                  fontFamily: FONT.mono,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 200ms'
+                }}
+              >
+                CANCEL
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  const cleaned = tempKey.trim()
+                  localStorage.setItem('0xverdict_openrouter_key', cleaned)
+                  setApiKey(cleaned)
+                  setShowKeyModal(false)
+                  setMessages(prev => [...prev, {
+                    sender: 'system',
+                    text: cleaned 
+                      ? 'Custom OpenRouter API Key configured successfully. Resuming standard shell routing.' 
+                      : 'Custom API Key cleared. Standard backend defaults active.',
+                    timestamp: new Date().toLocaleTimeString()
+                  }])
+                }}
+                style={{
+                  background: C.green,
+                  color: C.bgPrimary,
+                  border: `1px solid ${C.green}`,
+                  borderRadius: 4,
+                  padding: '8px 20px',
+                  fontFamily: FONT.mono,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 200ms',
+                  boxShadow: `0 0 10px rgba(0, 255, 136, 0.2)`
+                }}
+              >
+                SAVE & CONNECT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
