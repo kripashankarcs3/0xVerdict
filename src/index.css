@@ -6,9 +6,9 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-@keyframes drift-down {
-  0% { background-position: 0 0, 24px 24px, 12px 12px; }
-  100% { background-position: 0 192px, 24px 24px, 12px 12px; }
+@keyframes drift-transform {
+  0% { transform: translateY(-96px); }
+  100% { transform: translateY(0); }
 }
 
 @keyframes pulse-dot {
@@ -130,6 +130,10 @@ html, body {
   color: #F0F0F0;
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -147,8 +151,8 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
   background-size: 48px 48px, 24px 24px, 12px 12px;
   background-position: 0 0, 24px 24px, 12px 12px;
   opacity: 0.38;
-  animation: drift-down 25s linear infinite;
-  will-change: background-position;
+  animation: drift-transform 25s linear infinite;
+  will-change: transform;
 }
 
 .dot-grid-bg-clean {
@@ -158,8 +162,8 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
   background-size: 32px 32px, 16px 16px;
   background-position: 0 0, 16px 16px;
   opacity: 0.42;
-  animation: drift-down 40s linear infinite;
-  will-change: background-position;
+  animation: drift-transform 40s linear infinite;
+  will-change: transform;
 }
 
 .pulse-dot {
@@ -204,8 +208,7 @@ input::placeholder { color: #8892A4; font-family: 'JetBrains Mono', monospace; }
 /* ─── Cursor Follower ──────────────────────────────────────────────────── */
 .cursor-follower {
   animation: pulse-green 2s ease-in-out infinite;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  pointer-events: none;
 }
 
 @media (hover: none) and (pointer: coarse) {

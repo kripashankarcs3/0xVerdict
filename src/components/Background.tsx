@@ -124,7 +124,9 @@ export default function Background({ isDashboard, screen }: { isDashboard: boole
       <div
         className={isDashboard ? "dot-grid-bg" : "dot-grid-bg-clean"}
         style={{
-          position: 'absolute', inset: 0,
+          position: 'absolute',
+          top: -96, left: 0, right: 0, bottom: 0,
+          height: 'calc(100% + 96px)',
           opacity: dotGridOpacity,
           transition: screen === 'landing' ? 'opacity 2000ms ease-out' : 'none',
         }}
