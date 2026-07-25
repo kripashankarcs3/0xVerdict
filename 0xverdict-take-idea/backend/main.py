@@ -13,6 +13,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from pydantic import BaseModel
 from models import ScanRequest, ScanResult, ScanStatus
 from engines.recon import ReconEngine
 from engines.detection import DetectionEngine
@@ -142,6 +143,37 @@ async def download_pdf_report(scan_id: str):
 async def list_scans():
     """List all scans."""
     return state_manager.list_scans()
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+
+@app.post("/chat")
+async def chat_with_ai(request: ChatRequest):
+    """Interact directly with VerdictAI security analyst."""
+    try:
+        from engines.ai_orchestrator import client, OPENROUTER_MODEL
+        system_prompt = (
+            "You are VerdictAI, an advanced Tier-3 security analyst AI assistant. "
+            "You help developers fix web application vulnerabilities, understand exploits, "
+            "and build secure applications. Keep your responses technical, actionable, "
+            "and format secure code fixes in markdown block scopes. Keep responses concise "
+            "and style-themed like a terminal response."
+        )
+        response = await client.chat.completions.create(
+            model=OPENROUTER_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": request.message}
+            ],
+            max_tokens=1000
+        )
+        reply = response.choices[0].message.content
+        return {"response": reply}
+    except Exception as e:
+        return {"response": f"Error communicating with AI backend: {str(e)}"}
+
 
 
 async def run_scan_pipeline(scan_id: str, target_url: str):

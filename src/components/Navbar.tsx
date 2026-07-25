@@ -1,9 +1,21 @@
 import { useState, useEffect } from 'react'
 import { C, FONT } from '../constants'
-import type { NavStatus, AIStatus } from '../types'
+import type { NavStatus, AIStatus, Screen } from '../types'
 import finalLogo from '@/imports/final_logo.png'
 
-export default function Navbar({ status, aiStatus, onLogoClick }: { status: NavStatus; aiStatus: AIStatus; onLogoClick?: () => void }) {
+export default function Navbar({
+  status,
+  aiStatus,
+  activeScreen,
+  onNavigate,
+  onLogoClick
+}: {
+  status: NavStatus
+  aiStatus: AIStatus
+  activeScreen: Screen
+  onNavigate: (screen: Screen) => void
+  onLogoClick?: () => void
+}) {
   const [cursorOn, setCursorOn] = useState(true)
   const [signalBars, setSignalBars] = useState([0.3, 0.5, 0.7, 1])
 
@@ -68,6 +80,74 @@ export default function Navbar({ status, aiStatus, onLogoClick }: { status: NavS
         </div>
       </div>
 
+      {/* Center Nav Links */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        {[
+          { label: 'DASHBOARD', screen: 'landing', color: C.green },
+          { label: 'AUDIT HISTORY', screen: 'history', color: C.green },
+          { label: 'AI SECURITY CHAT', screen: 'chat', color: C.green },
+          { label: 'GLOBAL THREATS', screen: 'threats', color: C.cyan },
+          { label: 'API PLAYGROUND', screen: 'apiDocs', color: C.cyan },
+        ].map(link => {
+          const isScanning = status === 'scanning'
+          const isActive = 
+            link.screen === activeScreen || 
+            (link.screen === 'landing' && (activeScreen === 'scanning' || activeScreen === 'results'))
+          
+          return (
+            <button
+              key={link.screen}
+              onClick={() => {
+                if (!isScanning) onNavigate(link.screen as Screen)
+              }}
+              disabled={isScanning}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: isScanning 
+                  ? 'rgba(255,255,255,0.2)' 
+                  : isActive 
+                    ? link.color 
+                    : C.textPrimary,
+                fontFamily: FONT.mono,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                cursor: isScanning ? 'not-allowed' : 'pointer',
+                padding: '6px 10px',
+                borderRadius: 4,
+                opacity: isScanning ? 0.35 : isActive ? 1 : 0.6,
+                transition: 'all 200ms',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                position: 'relative'
+              }}
+              onMouseEnter={e => {
+                if (!isScanning && !isActive) {
+                  e.currentTarget.style.opacity = '1'
+                  e.currentTarget.style.color = link.color
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isScanning && !isActive) {
+                  e.currentTarget.style.opacity = '0.6'
+                  e.currentTarget.style.color = C.textPrimary
+                }
+              }}
+            >
+              {isActive && (
+                <div style={{
+                  width: 4, height: 4, borderRadius: '50%',
+                  background: link.color,
+                  boxShadow: `0 0 6px ${link.color}`
+                }} />
+              )}
+              {link.label}
+            </button>
+          )
+        })}
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <span style={{

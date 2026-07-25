@@ -97,5 +97,5 @@ export interface Finding {
 
 export type NavStatus = 'idle' | 'scanning' | 'complete'
 export type AIStatus = 'active' | 'thinking' | 'idle'
-export type Screen = 'landing' | 'scanning' | 'results'
+export type Screen = 'landing' | 'scanning' | 'results' | 'history' | 'chat' | 'threats' | 'apiDocs'
 export type FilterType = 'all' | 'confirmed' | 'verify' | 'fp'

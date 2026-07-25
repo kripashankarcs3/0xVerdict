@@ -44,11 +44,25 @@ function SummaryStat({ stat, index, arr }: {
   )
 }
 
-export default function Results({ target, onBack, onModal }: { target: string; onBack: () => void; onModal: () => void }) {
+export default function Results({
+  target,
+  findings = FINDINGS,
+  scanDate = '2026-07-25',
+  scanDuration = '45 sec',
+  onBack,
+  onModal
+}: {
+  target: string
+  findings?: Finding[]
+  scanDate?: string
+  scanDuration?: string
+  onBack: () => void
+  onModal: () => void
+}) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [selected, setSelected] = useState<Finding | null>(null)
 
-  const filtered = FINDINGS.filter(f => {
+  const filtered = findings.filter(f => {
     if (filter === 'all') return true
     if (filter === 'confirmed') return f.verdict === 'confirmed'
     if (filter === 'verify') return f.verdict === 'verify'
@@ -57,13 +71,13 @@ export default function Results({ target, onBack, onModal }: { target: string; o
   })
 
   const counts = {
-    confirmed: FINDINGS.filter(f => f.verdict === 'confirmed').length,
-    verify: FINDINGS.filter(f => f.verdict === 'verify').length,
-    fp: FINDINGS.filter(f => f.verdict === 'fp').length,
+    confirmed: findings.filter(f => f.verdict === 'confirmed').length,
+    verify: findings.filter(f => f.verdict === 'verify').length,
+    fp: findings.filter(f => f.verdict === 'fp').length,
   }
 
   const filters: { key: FilterType; label: string }[] = [
-    { key: 'all', label: `ALL (${FINDINGS.length})` },
+    { key: 'all', label: `ALL (${findings.length})` },
     { key: 'confirmed', label: `CONFIRMED (${counts.confirmed})` },
     { key: 'verify', label: `VERIFY (${counts.verify})` },
     { key: 'fp', label: `FALSE POSITIVE (${counts.fp})` },
@@ -83,7 +97,7 @@ export default function Results({ target, onBack, onModal }: { target: string; o
     },
     {
       label: 'SCAN DATE',
-      value: '2026-07-19',
+      value: scanDate,
       color: C.textPrimary,
       mono: true,
       icon: (
@@ -94,7 +108,7 @@ export default function Results({ target, onBack, onModal }: { target: string; o
     },
     {
       label: 'DURATION',
-      value: '45 sec',
+      value: scanDuration,
       color: C.textPrimary,
       mono: true,
       icon: (
@@ -105,7 +119,7 @@ export default function Results({ target, onBack, onModal }: { target: string; o
     },
     {
       label: 'CONFIRMED',
-      value: '3',
+      value: String(counts.confirmed),
       color: C.green,
       big: true,
       icon: (
