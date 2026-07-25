@@ -351,3 +351,13 @@ input:focus:not(:focus-visible) {
   .glitch-text span { text-shadow: none !important; }
   .hover-card:hover { border-color: #00FF88 !important; }
 }
+
+/* ─── HUD Side Panels ─────────────────────────────────────────────────── */
+.hud-left, .hud-right {
+  display: flex;
+}
+@media (max-width: 1240px) {
+  .hud-left, .hud-right {
+    display: none !important;
+  }
+}

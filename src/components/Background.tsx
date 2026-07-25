@@ -201,6 +201,74 @@ export default function Background({ isDashboard, screen }: { isDashboard: boole
           {f.text}
         </div>
       ))}
+
+      {/* Left HUD Panel */}
+      <div className="hud-left" style={{
+        position: 'fixed', left: 40, top: 140, bottom: 140, width: 140,
+        flexDirection: 'column', justifyContent: 'space-between',
+        pointerEvents: 'none', zIndex: 1, opacity: 0.5 * reveal,
+        transition: 'opacity 1000ms ease-out',
+        borderRight: `1px dashed rgba(0, 255, 136, 0.12)`,
+        paddingRight: 16,
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.green, letterSpacing: '0.08em' }}>//_GRID_STATUS</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: C.green }} />
+            <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textPrimary, fontWeight: 700 }}>SEC_ACTIVE</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.08em' }}>//_RECON_STATE</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textPrimary }}>PORT_OK : 8443</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>SYS_ONLINE</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.08em' }}>//_ORCHESTRATOR</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.cyan }}>AI_READY</span>
+        </div>
+      </div>
+
+      {/* Right HUD Panel */}
+      <div className="hud-right" style={{
+        position: 'fixed', right: 40, top: 140, bottom: 140, width: 140,
+        flexDirection: 'column', justifyContent: 'space-between',
+        pointerEvents: 'none', zIndex: 1, opacity: 0.5 * reveal,
+        transition: 'opacity 1000ms ease-out',
+        borderLeft: `1px dashed rgba(0, 212, 255, 0.12)`,
+        paddingLeft: 16,
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.cyan, letterSpacing: '0.08em' }}>//_INTEGRITY</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 8px)', gap: 4, marginTop: 4 }}>
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  width: 8, height: 8, borderRadius: '1px',
+                  background: i % 5 === 0 ? C.red : i % 3 === 0 ? C.cyan : C.green,
+                  opacity: i % 2 === 0 ? 0.35 : 0.85,
+                  animation: i % 3 === 0 ? 'pulse-dot 1.5s infinite alternate' : 'none',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.08em' }}>//_TELEMETRY</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textPrimary }}>LAT_0.02ms</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>SYS_60FPS</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.08em' }}>//_SYS_REGION</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>HUD: LOCAL_POOL</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>LOC: 0X_SEC</span>
+        </div>
+      </div>
     </div>
   )
 }
