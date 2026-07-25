@@ -8,24 +8,28 @@ function MatrixRainCanvas({ color = '#00d4ff' }: { color?: string }) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    
-    const resizeCanvas = () => {
-      canvas.width = canvas.clientWidth
-      canvas.height = canvas.clientHeight
-    }
-    resizeCanvas()
-
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    let columns = 0
+    let drops: { y: number; speed: number; history: { char: string; opacity: number }[] }[] = []
     const fontSize = 11
-    const columns = Math.floor(canvas.width / 14)
-    
-    const drops = Array.from({ length: columns }, () => ({
-      y: Math.random() * -600,
-      speed: 1.5 + Math.random() * 2.5,
-      history: [] as { char: string; opacity: number }[]
-    }))
+
+    const resizeCanvas = () => {
+      canvas.width = canvas.clientWidth
+      canvas.height = canvas.clientHeight
+      
+      const newColumns = Math.floor(canvas.width / 12)
+      if (newColumns !== columns) {
+        columns = newColumns
+        drops = Array.from({ length: columns }, () => ({
+          y: Math.random() * -canvas.height,
+          speed: 1.5 + Math.random() * 2.5,
+          history: [] as { char: string; opacity: number }[]
+        }))
+      }
+    }
+    resizeCanvas()
 
     const chars = '01010101010101HEX0XVERDICTSQLiXSS<>[]{}/\\'
 
@@ -36,7 +40,7 @@ function MatrixRainCanvas({ color = '#00d4ff' }: { color?: string }) {
 
       for (let i = 0; i < drops.length; i++) {
         const drop = drops[i]
-        const x = i * 14
+        const x = i * 12
 
         const newChar = chars[Math.floor(Math.random() * chars.length)]
         drop.history.push({ char: newChar, opacity: 1.0 })
