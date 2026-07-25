@@ -13,13 +13,13 @@ function MatrixRainCanvas({ color = '#00d4ff' }: { color?: string }) {
 
     let columns = 0
     let drops: { y: number; speed: number; history: { char: string; opacity: number }[] }[] = []
-    const fontSize = 11
+    const fontSize = 9
 
     const resizeCanvas = () => {
       canvas.width = canvas.clientWidth
       canvas.height = canvas.clientHeight
       
-      const newColumns = Math.floor(canvas.width / 12)
+      const newColumns = Math.floor(canvas.width / 8)
       if (newColumns !== columns) {
         columns = newColumns
         drops = Array.from({ length: columns }, () => ({
@@ -40,7 +40,7 @@ function MatrixRainCanvas({ color = '#00d4ff' }: { color?: string }) {
 
       for (let i = 0; i < drops.length; i++) {
         const drop = drops[i]
-        const x = i * 12
+        const x = i * 8
 
         const newChar = chars[Math.floor(Math.random() * chars.length)]
         drop.history.push({ char: newChar, opacity: 1.0 })
@@ -51,7 +51,7 @@ function MatrixRainCanvas({ color = '#00d4ff' }: { color?: string }) {
 
         for (let h = 0; h < drop.history.length; h++) {
           const item = drop.history[h]
-          const y = drop.y - (drop.history.length - 1 - h) * (fontSize + 3)
+          const y = drop.y - (drop.history.length - 1 - h) * (fontSize + 2)
           
           item.opacity = Math.max(0, item.opacity - 0.03)
 
@@ -72,7 +72,7 @@ function MatrixRainCanvas({ color = '#00d4ff' }: { color?: string }) {
 
         drop.y += drop.speed
 
-        if (drop.y - drop.history.length * (fontSize + 3) > canvas.height) {
+        if (drop.y - drop.history.length * (fontSize + 2) > canvas.height) {
           drop.y = 0
           drop.history = []
         }
@@ -292,22 +292,22 @@ export default function Background({ isDashboard, screen }: { isDashboard: boole
 
       {/* Left Full-Height Matrix Rain */}
       <div className="hud-left" style={{
-        position: 'fixed', left: 0, top: 0, bottom: 0, width: 350,
+        position: 'fixed', left: 0, top: 0, bottom: 0, width: 260,
         pointerEvents: 'none', zIndex: 1, opacity: 0.32 * reveal,
         transition: 'opacity 1000ms ease-out',
-        maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 40%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 40%, transparent)',
+        maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 50%, transparent)',
+        WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 50%, transparent)',
       }}>
         <MatrixRainCanvas color={C.green} />
       </div>
 
       {/* Right Full-Height Matrix Rain */}
       <div className="hud-right" style={{
-        position: 'fixed', right: 0, top: 0, bottom: 0, width: 350,
+        position: 'fixed', right: 0, top: 0, bottom: 0, width: 260,
         pointerEvents: 'none', zIndex: 1, opacity: 0.32 * reveal,
         transition: 'opacity 1000ms ease-out',
-        maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 40%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 40%, transparent)',
+        maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 50%, transparent)',
+        WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 50%, transparent)',
       }}>
         <MatrixRainCanvas color={C.cyan} />
       </div>
