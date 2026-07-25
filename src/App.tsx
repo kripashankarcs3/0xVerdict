@@ -35,9 +35,11 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  const navigateTo = (nextScreen: Screen) => {
+  const navigateTo = (nextScreen: Screen, replace = false) => {
     setScreen(nextScreen)
-    if (nextScreen === 'results' || nextScreen === 'landing') {
+    if (replace) {
+      window.history.replaceState({ screen: nextScreen }, '')
+    } else {
       window.history.pushState({ screen: nextScreen }, '')
     }
   }
@@ -46,11 +48,11 @@ export default function App() {
 
   const handleScan = useCallback((url: string) => {
     setTarget(url)
-    setScreen('scanning')
+    navigateTo('scanning')
   }, [])
 
   const handleScanComplete = useCallback(() => {
-    navigateTo('results')
+    navigateTo('results', true)
   }, [])
 
   const handleBackToLanding = useCallback(() => {
