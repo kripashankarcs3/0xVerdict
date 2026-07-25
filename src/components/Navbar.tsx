@@ -3,7 +3,7 @@ import { C, FONT } from '../constants'
 import type { NavStatus, AIStatus } from '../types'
 import finalLogo from '@/imports/final_logo.png'
 
-export default function Navbar({ status, aiStatus }: { status: NavStatus; aiStatus: AIStatus }) {
+export default function Navbar({ status, aiStatus, onLogoClick }: { status: NavStatus; aiStatus: AIStatus; onLogoClick?: () => void }) {
   const [cursorOn, setCursorOn] = useState(true)
   const [signalBars, setSignalBars] = useState([0.3, 0.5, 0.7, 1])
 
@@ -38,7 +38,19 @@ export default function Navbar({ status, aiStatus }: { status: NavStatus; aiStat
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 32px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div 
+        onClick={onLogoClick}
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 12, 
+          cursor: onLogoClick ? 'pointer' : 'default',
+          userSelect: 'none'
+        }}
+        role={onLogoClick ? 'button' : undefined}
+        tabIndex={onLogoClick ? 0 : undefined}
+        onKeyDown={e => { if (onLogoClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onLogoClick(); } }}
+      >
         <img
           src={finalLogo}
           alt="0xVerdict logo"
@@ -55,6 +67,7 @@ export default function Navbar({ status, aiStatus }: { status: NavStatus; aiStat
           </div>
         </div>
       </div>
+
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <span style={{

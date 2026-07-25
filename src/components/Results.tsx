@@ -44,7 +44,7 @@ function SummaryStat({ stat, index, arr }: {
   )
 }
 
-export default function Results({ target, onModal }: { target: string; onModal: () => void }) {
+export default function Results({ target, onBack, onModal }: { target: string; onBack: () => void; onModal: () => void }) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [selected, setSelected] = useState<Finding | null>(null)
 
@@ -165,7 +165,7 @@ export default function Results({ target, onModal }: { target: string; onModal: 
             <span style={{ fontFamily: FONT.mono, fontWeight: 600, fontSize: 10, color: C.muted, letterSpacing: '0.08em' }}>
               //_VULNERABILITY_FINDINGS
             </span>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               {filters.map(f => {
                 const isActive = filter === f.key
                 return (
@@ -188,6 +188,23 @@ export default function Results({ target, onModal }: { target: string; onModal: 
                   </button>
                 )
               })}
+              <div style={{ width: 1, height: 16, background: C.border, margin: '0 8px' }} />
+              <button
+                onClick={onBack}
+                style={{
+                  fontFamily: FONT.mono, fontSize: 9, padding: '5px 12px', borderRadius: 4,
+                  cursor: 'pointer', border: `1px solid ${C.cyan}`,
+                  background: 'rgba(0, 212, 255, 0.08)',
+                  color: C.cyan,
+                  transition: 'all 150ms',
+                  fontWeight: 700,
+                  boxShadow: `0 0 8px rgba(0, 212, 255, 0.2)`,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0, 212, 255, 0.15)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0, 212, 255, 0.08)' }}
+              >
+                &lt; NEW SCAN
+              </button>
             </div>
           </div>
 
