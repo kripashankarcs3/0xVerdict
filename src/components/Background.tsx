@@ -288,22 +288,22 @@ export default function Background({ isDashboard, screen }: { isDashboard: boole
 
       {/* Left Full-Height Matrix Rain */}
       <div className="hud-left" style={{
-        position: 'fixed', left: 0, top: 0, bottom: 0, width: 220,
-        pointerEvents: 'none', zIndex: 1, opacity: 0.28 * reveal,
+        position: 'fixed', left: 0, top: 0, bottom: 0, width: 350,
+        pointerEvents: 'none', zIndex: 1, opacity: 0.32 * reveal,
         transition: 'opacity 1000ms ease-out',
-        maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 30%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 30%, transparent)',
+        maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 40%, transparent)',
+        WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 40%, transparent)',
       }}>
         <MatrixRainCanvas color={C.green} />
       </div>
 
       {/* Right Full-Height Matrix Rain */}
       <div className="hud-right" style={{
-        position: 'fixed', right: 0, top: 0, bottom: 0, width: 220,
-        pointerEvents: 'none', zIndex: 1, opacity: 0.28 * reveal,
+        position: 'fixed', right: 0, top: 0, bottom: 0, width: 350,
+        pointerEvents: 'none', zIndex: 1, opacity: 0.32 * reveal,
         transition: 'opacity 1000ms ease-out',
-        maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, transparent)',
+        maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 40%, transparent)',
+        WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 40%, transparent)',
       }}>
         <MatrixRainCanvas color={C.cyan} />
       </div>

@@ -356,7 +356,7 @@ input:focus:not(:focus-visible) {
 .hud-left, .hud-right {
   display: flex;
 }
-@media (max-width: 1240px) {
+@media (max-width: 1380px) {
   .hud-left, .hud-right {
     display: none !important;
   }
