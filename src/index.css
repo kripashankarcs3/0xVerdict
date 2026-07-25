@@ -125,8 +125,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+
 html, body {
-  zoom: 0.94;
+  zoom: 0.97;
   background: #0A0A0F;
   color: #F0F0F0;
   font-family: 'Inter', sans-serif;
