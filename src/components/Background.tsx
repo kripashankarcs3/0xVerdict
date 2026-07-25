@@ -1,40 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { C, FONT, MATRIX_CHARS, HEX_CHARS, BINARY_CHARS, HACKER_COMMANDS } from '../constants'
+import { C, FONT, MATRIX_CHARS, HEX_CHARS, BINARY_CHARS } from '../constants'
 import type { Screen } from '../types'
 
-function HackerStreams({ isDashboard, reveal, direction = 'up', speed = '18s' }: { 
-  isDashboard?: boolean; 
-  reveal?: number;
-  direction?: 'up' | 'down';
-  speed?: string;
-}) {
-  const doubleList = [...HACKER_COMMANDS, ...HACKER_COMMANDS]
-  const ro = reveal ?? 1
-  return (
-    <div style={{
-      position: 'absolute', top: 0, bottom: 0, width: '100%',
-      overflow: 'hidden', pointerEvents: 'none',
-      opacity: ro,
-      maskImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.8) 15%, rgba(0,0,0,0.8) 85%, transparent)',
-      WebkitMaskImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.8) 15%, rgba(0,0,0,0.8) 85%, transparent)',
-    }}>
-      <div style={{
-        display: 'flex', flexDirection: 'column', gap: 16,
-        animation: `${direction === 'up' ? 'cyber-scroll-up' : 'cyber-scroll-down'} ${speed} linear infinite`,
-      }}>
-        {doubleList.map((cmd, i) => (
-          <div key={i} style={{
-            fontFamily: FONT.mono, fontSize: 9,
-            color: isDashboard ? 'rgba(0, 255, 136, 0.35)' : 'rgba(0, 255, 136, 0.22)',
-            whiteSpace: 'nowrap', textShadow: isDashboard ? 'none' : '0 0 2px rgba(0,255,136,0.1)',
-          }}>
-            &gt; {cmd}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+
 
 function CyberRadar({ isDashboard, reveal }: { isDashboard?: boolean; reveal?: number }) {
   const ro = reveal ?? 1
@@ -172,12 +140,7 @@ export default function Background({ isDashboard, screen }: { isDashboard: boole
         />
       ))}
 
-      <div style={{ position: 'absolute', left: 24, top: 80, bottom: 80, width: 220 }}>
-        <HackerStreams isDashboard={isDashboard} reveal={reveal} direction="up" speed="18s" />
-      </div>
-      <div style={{ position: 'absolute', right: 24, top: 80, bottom: 80, width: 220 }}>
-        <HackerStreams isDashboard={isDashboard} reveal={reveal} direction="down" speed="22s" />
-      </div>
+
 
       <div style={{
         position: 'absolute', left: 0, top: 0, right: 0,
