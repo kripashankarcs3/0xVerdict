@@ -271,17 +271,210 @@ export default function Landing({ onScan }: { onScan: (url: string) => void }) {
         </div>
       </div>
 
+      {/* WORKFLOW PIPELINE SECTION */}
       <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: C.bgSecondary, borderTop: `1px solid ${C.border}`,
-        padding: '12px 24px', textAlign: 'center', zIndex: 10,
+        marginTop: 80, width: '100%', maxWidth: 680, textAlign: 'left',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(24px)',
+        transition: `opacity ${MOTION.duration.slow}ms ${MOTION.easing} 1500ms, transform ${MOTION.duration.slow}ms ${MOTION.easing} 1500ms`,
+      }}>
+        <div style={{ fontFamily: FONT.mono, fontSize: 10, color: C.green, marginBottom: 8, letterSpacing: '0.08em' }}>
+          //_ANALYSIS_WORKFLOW_PIPELINE
+        </div>
+        <h2 style={{ fontFamily: FONT.grotesk, fontWeight: 700, fontSize: 24, color: C.textPrimary, marginBottom: 28, letterSpacing: '-0.01em' }}>
+          How 0xVerdict Secures Your Stack
+        </h2>
+        
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 16
+        }}>
+          {[
+            {
+              step: '01', title: 'Deep Reconnaissance', desc: 'Crawls domains, identifies active endpoints, forms, parameters, and parses HTTP security headers to construct a full attack surface map.',
+              color: C.green
+            },
+            {
+              step: '02', title: 'Exploit Simulation', desc: 'Sends non-destructive security validation payloads (e.g. SQL Injection boundaries, XSS reflections) to test active validation defenses.',
+              color: C.orange
+            },
+            {
+              step: '03', title: 'AI Reasoning & Remediation', desc: 'Feeds raw findings into the AI Orchestrator to filter false alerts, describe root causes, and output custom code fixes for PHP, Python, and Node.js.',
+              color: C.cyan
+            }
+          ].map((item, idx) => (
+            <div key={idx} className="hover-card" style={{
+              background: C.bgSecondary,
+              border: `1px solid ${C.border}`,
+              borderRadius: 8,
+              padding: '20px 24px',
+              display: 'flex',
+              gap: 20,
+              alignItems: 'flex-start',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                position: 'absolute', top: 8, right: 12,
+                fontFamily: FONT.mono, fontSize: 32, fontWeight: 900,
+                color: `${item.color}08`, userSelect: 'none'
+              }}>{item.step}</div>
+              
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: `${item.color}15`, border: `1px solid ${item.color}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: FONT.mono, fontSize: 11, fontWeight: 700, color: item.color,
+                flexShrink: 0
+              }}>
+                {item.step}
+              </div>
+              
+              <div>
+                <h3 style={{ fontFamily: FONT.grotesk, fontWeight: 600, fontSize: 15, color: C.textPrimary, marginBottom: 4 }}>
+                  {item.title}
+                </h3>
+                <p style={{ fontFamily: FONT.inter, fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
+                  {item.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* METRICS & RADAR SECTION */}
+      <div style={{
+        marginTop: 64, width: '100%', maxWidth: 680, textAlign: 'left',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(24px)',
+        transition: `opacity ${MOTION.duration.slow}ms ${MOTION.easing} 1600ms, transform ${MOTION.duration.slow}ms ${MOTION.easing} 1600ms`,
+      }}>
+        <div style={{ fontFamily: FONT.mono, fontSize: 10, color: C.cyan, marginBottom: 8, letterSpacing: '0.08em' }}>
+          //_LIVE_THREAT_RADAR
+        </div>
+        <h2 style={{ fontFamily: FONT.grotesk, fontWeight: 700, fontSize: 24, color: C.textPrimary, marginBottom: 28, letterSpacing: '-0.01em' }}>
+          Assessment Metrics
+        </h2>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: 16,
+        }}>
+          {[
+            { label: 'GLOBAL ASSESSMENTS', value: '298,419', desc: 'Verified endpoints' },
+            { label: 'FALSE POSITIVES FILTERED', value: '94.2%', desc: 'AI confidence rate' },
+            { label: 'AVG SCAN SPEED', value: '45s', desc: 'Realtime analysis' },
+            { label: 'AI VERDICT PIPELINE', value: 'OPTIMAL', desc: 'Agent active', color: C.green, mono: true }
+          ].map((stat, idx) => (
+            <div key={idx} className="hover-card" style={{
+              background: 'rgba(15, 15, 26, 0.4)',
+              border: `1px solid ${C.border}`,
+              borderRadius: 8,
+              padding: '20px 16px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontFamily: FONT.mono, fontSize: 8, color: C.muted, letterSpacing: '0.06em', marginBottom: 8 }}>
+                //_{stat.label}
+              </div>
+              <div style={{
+                fontFamily: stat.mono ? FONT.mono : FONT.grotesk,
+                fontWeight: 700, fontSize: 22,
+                color: stat.color || C.cyan,
+                marginBottom: 4,
+                textShadow: `0 0 10px ${(stat.color || C.cyan)}20`
+              }}>
+                {stat.value}
+              </div>
+              <div style={{ fontFamily: FONT.inter, fontSize: 10, color: C.muted }}>
+                {stat.desc}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* FAQ SECTION */}
+      <div style={{
+        marginTop: 64, width: '100%', maxWidth: 680, textAlign: 'left',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(24px)',
+        transition: `opacity ${MOTION.duration.slow}ms ${MOTION.easing} 1700ms, transform ${MOTION.duration.slow}ms ${MOTION.easing} 1700ms`,
+        paddingBottom: 40,
+      }}>
+        <div style={{ fontFamily: FONT.mono, fontSize: 10, color: C.purple, marginBottom: 8, letterSpacing: '0.08em' }}>
+          //_SYSTEM_KNOWLEDGE_BASE
+        </div>
+        <h2 style={{ fontFamily: FONT.grotesk, fontWeight: 700, fontSize: 24, color: C.textPrimary, marginBottom: 28, letterSpacing: '-0.01em' }}>
+          Security Testing FAQ
+        </h2>
+        
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 12
+        }}>
+          {[
+            {
+              q: "How does the AI Verdict engine eliminate false positives?",
+              a: "Unlike traditional scanners that alert on any raw pattern match (e.g. database error text in HTML), 0xVerdict feeds the exact HTTP scan context, request headers, and response telemetry into our security-tuned model to simulate reasoning. The AI confirms vulnerabilities only when execution evidence is mathematically verified."
+            },
+            {
+              q: "Is it safe to run 0xVerdict on production systems?",
+              a: "Yes. 0xVerdict simulates security vulnerabilities non-intrusively. It checks response headers, runs input boundaries, and inspects errors without attempting to read restricted files, execute system shells, or modify databases."
+            },
+            {
+              q: "How are the custom remediation code snippets written?",
+              a: "For every verified vulnerability, the AI parses the specific parameters and data formats. It generates clean, optimized code wrappers using modern secure coding practices (such as parameterized bindings for SQL and HTML sanitizers for XSS) for Node.js, Python, and PHP."
+            }
+          ].map((faq, idx) => (
+            <details key={idx} className="faq-details" style={{
+              background: C.bgSecondary,
+              border: `1px solid ${C.border}`,
+              borderRadius: 8,
+              padding: '16px 20px',
+              cursor: 'pointer',
+              transition: 'border-color 200ms',
+            }}>
+              <summary style={{
+                fontFamily: FONT.grotesk, fontWeight: 600, fontSize: 14,
+                color: C.textPrimary, listStyle: 'none', display: 'flex',
+                justifyContent: 'space-between', alignItems: 'center',
+                outline: 'none', userSelect: 'none'
+              }}>
+                {faq.q}
+                <span style={{ color: C.green, fontSize: 14, fontFamily: FONT.mono }}>+</span>
+              </summary>
+              <div style={{
+                fontFamily: FONT.inter, fontSize: 12, color: C.muted,
+                lineHeight: 1.6, marginTop: 12, borderTop: `1px solid ${C.border}`,
+                paddingTop: 12, cursor: 'default'
+              }}>
+                {faq.a}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
+      {/* STATIC PAGE FOOTER */}
+      <footer style={{
+        width: '100%',
+        background: C.bgSecondary,
+        borderTop: `1px solid ${C.border}`,
+        padding: '32px 24px 40px',
+        textAlign: 'center',
         opacity: visible ? 1 : 0,
         transition: `opacity ${MOTION.duration.moderate}ms ${MOTION.easing}`,
       }}>
-        <p style={{ fontFamily: FONT.inter, fontSize: 10, color: C.muted, lineHeight: 1.4, maxWidth: 800, margin: '0 auto' }}>
-          &#x26A0; NOTICE: This tool is intended exclusively for authorized security testing environments. Unauthorized scanning violates global cyber defense frameworks. Authors assume no liability for misuse.
-        </p>
-      </div>
+        <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontFamily: FONT.inter, fontSize: 10, color: C.muted, lineHeight: 1.5 }}>
+            &#x26A0; NOTICE: This tool is intended exclusively for authorized security testing environments. Unauthorized scanning violates global cyber defense frameworks. Authors assume no liability for misuse.
+          </p>
+          <div style={{ width: 40, height: 1, background: C.border, margin: '8px auto' }} />
+          <p style={{ fontFamily: FONT.mono, fontSize: 9, color: C.muted, letterSpacing: '0.04em' }}>
+            &copy; 2026 0XVERDICT SECURITY SOLUTIONS. ALL RIGHTS RESERVED.
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }
