@@ -13,6 +13,18 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+# Load env variables manually from .env before local imports
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    with open(env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, val = line.split("=", 1)
+                os.environ[key.strip()] = val.strip().strip('"').strip("'")
+
 from pydantic import BaseModel
 from models import ScanRequest, ScanResult, ScanStatus
 from engines.recon import ReconEngine
