@@ -69,7 +69,7 @@ class DetectionEngine:
         self.timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
 
     async def run(self) -> list[dict]:
-        """Run all three scanners and return raw findings list."""
+        """Run all three scanners and return deduplicated raw findings list."""
         async with aiohttp.ClientSession(
             connector=self.connector, timeout=self.timeout
         ) as session:
@@ -79,7 +79,20 @@ class DetectionEngine:
                 self._scan_xss(session),
                 return_exceptions=True,
             )
-        return self.findings
+        return self._deduplicate(self.findings)
+
+    def _deduplicate(self, findings: list[dict]) -> list[dict]:
+        """Keep only one finding per (type, endpoint) pair — best evidence wins."""
+        seen: dict[tuple, dict] = {}
+        for f in findings:
+            key = (f.get("type", ""), f.get("endpoint", ""))
+            if key not in seen:
+                seen[key] = f
+            else:
+                # Keep the one with more evidence (longer raw_evidence)
+                if len(f.get("raw_evidence", "")) > len(seen[key].get("raw_evidence", "")):
+                    seen[key] = f
+        return list(seen.values())
 
     # ─── Scanner 1: Security Headers ─────────────────────────────────────────
     async def _scan_security_headers(self):

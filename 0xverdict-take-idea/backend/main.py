@@ -234,7 +234,7 @@ async def run_scan_pipeline(scan_id: str, target_url: str):
         analyzed_findings = await ai_engine.analyze_all(raw_findings)
 
         # --- FINALIZE ---
-        elapsed = (datetime.now() - start_time).seconds
+        elapsed = int((datetime.now() - start_time).total_seconds())
         state_manager.finalize_scan(scan_id, analyzed_findings, elapsed)
 
     except Exception as e:
