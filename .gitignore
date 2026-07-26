@@ -1,7 +1,47 @@
-node_modules
-dist
-__pycache__/
-*.pyc
+# Environment and secrets
 .env
+.env.*
+*.env
+*.pem
+*.key
+*.p12
+*.crt
+*.cer
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Runtime and local data
 scan_data/
 scan_data_backup/
+*.log
+*.sqlite
+*.db
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Project planning docs
+**/plan.md
+**/plan-*.md
+**/*plan*.md
