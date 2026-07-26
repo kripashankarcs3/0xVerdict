@@ -4,16 +4,16 @@ FastAPI server orchestrating Recon, Detection, and AI Analysis engines.
 """
 
 import os
+import asyncio
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 import uvicorn
 import uuid
-import json
 from datetime import datetime
 from pathlib import Path
 
-# Load env variables manually from .env before local imports
+# Load .env file before local imports
 env_path = Path(__file__).parent / ".env"
 if env_path.exists():
     with open(env_path, "r", encoding="utf-8") as f:
@@ -29,7 +29,7 @@ from pydantic import BaseModel
 from models import ScanRequest, ScanResult, ScanStatus
 from engines.recon import ReconEngine
 from engines.detection import DetectionEngine
-from engines.ai_orchestrator import AIOrchestrator, OPENROUTER_API_KEY, OPENROUTER_MODEL
+from engines.ai_orchestrator import AIOrchestrator, OPENROUTER_API_KEY, OPENROUTER_MODEL, client
 from engines.reporter import ReportingEngine
 from state_manager import ScanStateManager
 
@@ -58,6 +58,8 @@ app.add_middleware(
 state_manager = ScanStateManager()
 
 
+# ── Routes ────────────────────────────────────────────────────────────────────
+
 @app.get("/")
 async def root():
     return {"message": "0xVerdict API is running", "version": "1.0.0"}
@@ -65,18 +67,15 @@ async def root():
 
 @app.get("/health")
 async def health():
-    """Health check — no rate limiting applied."""
-    # PDF availability check
+    """Health check."""
     pdf_method = "none"
-    try:
-        import weasyprint  # noqa: F401
-        pdf_method = "weasyprint"
-    except ImportError:
+    for lib in ("weasyprint", "reportlab"):
         try:
-            import reportlab  # noqa: F401
-            pdf_method = "reportlab"
+            __import__(lib)
+            pdf_method = lib
+            break
         except ImportError:
-            pass
+            continue
 
     all_states = state_manager.list_scans()
     active = sum(1 for s in all_states if s["scan_status"] not in ("Completed", "Failed"))
@@ -161,54 +160,56 @@ class ChatRequest(BaseModel):
     message: str
 
 
-from typing import Optional
-from fastapi import Header
-
 @app.post("/chat")
-async def chat_with_ai(request: ChatRequest, authorization: Optional[str] = Header(None)):
-    """Interact directly with VerdictAI security analyst."""
-    api_key = None
-    if authorization and authorization.startswith("Bearer "):
-        api_key = authorization.split("Bearer ", 1)[1].strip()
-
-    if not api_key:
-        from engines.ai_orchestrator import OPENROUTER_API_KEY
-        api_key = OPENROUTER_API_KEY
-
-    # Check if key is empty or dummy
-    if not api_key or api_key.startswith("YOUR_") or api_key == "":
-        return {"error": "API_KEY_MISSING", "response": "API Key not configured. Please add your OpenRouter API key."}
+async def chat(request: ChatRequest):
+    """AI Security Chat — uses the configured OpenRouter API key. No user key needed."""
+    if not request.message.strip():
+        return {"error": "Empty message"}
 
     try:
-        from openai import AsyncOpenAI
-        from engines.ai_orchestrator import OPENROUTER_MODEL, OPENROUTER_BASE_URL
-        
-        dynamic_client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=OPENROUTER_BASE_URL,
+        from engines.ai_orchestrator import _get_client, OPENROUTER_MODEL
+        fresh_client = _get_client()
+        response = await asyncio.wait_for(
+            fresh_client.chat.completions.create(
+                model=OPENROUTER_MODEL,
+                max_tokens=1000,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are VerdictAI, a cybersecurity expert in 0xVerdict. "
+                            "Answer concisely and technically. Use markdown for code."
+                        )
+                    },
+                    {"role": "user", "content": request.message.strip()}
+                ],
+            ),
+            timeout=25.0
         )
-        
-        system_prompt = (
-            "You are VerdictAI, an advanced Tier-3 security analyst AI assistant. "
-            "You help developers fix web application vulnerabilities, understand exploits, "
-            "and build secure applications. Keep your responses technical, actionable, "
-            "and format secure code fixes in markdown block scopes. Keep responses concise "
-            "and style-themed like a terminal response."
-        )
-        response = await dynamic_client.chat.completions.create(
-            model=OPENROUTER_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": request.message}
-            ],
-            max_tokens=1000
-        )
-        reply = response.choices[0].message.content
-        return {"response": reply}
+        content = response.choices[0].message.content or ""
+        if not content.strip() and hasattr(response.choices[0].message, 'reasoning_content'):
+            reasoning = response.choices[0].message.reasoning_content or ""
+            # For reasoning models: extract the final answer after thinking
+            # Look for patterns like "**Answer:**" or the last paragraph
+            import re as _re
+            # Try to find conclusion after "In conclusion" or "**" headers
+            parts = _re.split(r'\n\n(?=\*\*(?:Answer|Summary|Conclusion|Response|Result))', reasoning)
+            if len(parts) > 1:
+                content = parts[-1].strip()
+            else:
+                # Take last 2 paragraphs as the answer
+                paras = [p.strip() for p in reasoning.strip().split('\n\n') if p.strip()]
+                content = '\n\n'.join(paras[-2:]) if len(paras) >= 2 else reasoning.strip()
+        return {"response": content.strip() or "No response generated."}
+    except asyncio.TimeoutError:
+        return {"response": "Request timed out. Please try again."}
     except Exception as e:
-        return {"response": f"Error communicating with AI backend: {str(e)}"}
+        return {"error": str(e), "response": f"AI error: {str(e)}"}
+    except Exception as e:
+        return {"error": str(e), "response": f"AI error: {str(e)}"}
 
 
+# ── Scan Pipeline ──────────────────────────────────────────────────────────────
 
 async def run_scan_pipeline(scan_id: str, target_url: str):
     """Full scan pipeline: Recon → Detection → AI Analysis."""

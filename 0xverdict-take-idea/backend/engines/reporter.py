@@ -195,7 +195,7 @@ class ReportingEngine:
             pass
 
         # Last resort: save as plain text PDF placeholder
-        output_path = f"/tmp/0xverdict-{scan_id[:8]}.txt"
+        output_path = os.path.join(tempfile.gettempdir(), f"0xverdict-{scan_id[:8]}.txt")
         with open(output_path, "w") as f:
             f.write(md_content)
         return output_path
@@ -232,7 +232,7 @@ class ReportingEngine:
         <body>{html_body}</body>
         </html>
         """
-        output_path = f"/tmp/0xverdict-{scan_id[:8]}.pdf"
+        output_path = os.path.join(tempfile.gettempdir(), f"0xverdict-{scan_id[:8]}.pdf")
         HTML(string=full_html).write_pdf(output_path)
         return output_path
 
@@ -245,7 +245,7 @@ class ReportingEngine:
             SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
         )
 
-        output_path = f"/tmp/0xverdict-{scan_id[:8]}.pdf"
+        output_path = os.path.join(tempfile.gettempdir(), f"0xverdict-{scan_id[:8]}.pdf")
         doc = SimpleDocTemplate(output_path, pagesize=A4, topMargin=0.75*inch)
         styles = getSampleStyleSheet()
         story = []

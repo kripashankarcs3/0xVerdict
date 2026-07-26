@@ -15,16 +15,18 @@ import os
 import re
 from openai import AsyncOpenAI
 
-# OpenRouter uses OpenAI-compatible API
-# Default to a free model; override via OPENROUTER_MODEL env var
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-v4-flash:free")
+# OpenCode Zen uses OpenAI-compatible API
+OPENROUTER_BASE_URL = "https://opencode.ai/zen/v1"
+OPENROUTER_API_KEY = os.environ.get("OPENCODE_API_KEY", "sk-VIbqP1rTs1nUows5PLp7Rts2HPoTZTdD4tFDDszqbuhlBGF0u02Q8ihFNUbRp4MX")
+OPENROUTER_MODEL = os.environ.get("OPENCODE_MODEL", "big-pickle")
 
-client = AsyncOpenAI(
-    api_key=OPENROUTER_API_KEY,
-    base_url=OPENROUTER_BASE_URL,
-)
+
+def _get_client() -> AsyncOpenAI:
+    """Always use the hardcoded key — no env lookup to avoid loading issues."""
+    return AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url=OPENROUTER_BASE_URL)
+
+
+client = _get_client()
 
 SYSTEM_PROMPT = """You are a Tier-3 Security Analyst with 15+ years of penetration testing experience.
 You have deep expertise in OWASP Top 10 vulnerabilities, web application security, and secure coding practices.
@@ -108,10 +110,11 @@ class AIOrchestrator:
     async def _call_claude(self, finding: dict) -> dict:
         """Build context packet and call LLM via OpenRouter for AI verdict."""
         context_packet = self._build_context_packet(finding)
+        fresh_client = _get_client()
 
-        response = await client.chat.completions.create(
+        response = await fresh_client.chat.completions.create(
             model=OPENROUTER_MODEL,
-            max_tokens=1500,
+            max_tokens=4000,
             messages=[
                 {
                     "role": "system",
@@ -133,6 +136,13 @@ class AIOrchestrator:
         )
 
         raw_text = response.choices[0].message.content.strip()
+        # Some reasoning models return content in reasoning_content field
+        if not raw_text and hasattr(response.choices[0].message, 'reasoning_content'):
+            raw_text = (response.choices[0].message.reasoning_content or '').strip()
+            # Extract JSON from reasoning if present
+            json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+            if json_match:
+                raw_text = json_match.group()
         # Strip markdown fences if present
         raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.MULTILINE)
         raw_text = re.sub(r"\s*```$", "", raw_text, flags=re.MULTILINE)

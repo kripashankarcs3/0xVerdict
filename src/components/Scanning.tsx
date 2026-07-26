@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { C, FONT, TERMINAL_LINES } from '../constants'
+import { getScanStatus } from '../utils/api'
 
-export default function Scanning({ target, onComplete }: { target: string; onComplete: () => void }) {
+export default function Scanning({ target, scanId, onComplete }: { target: string; scanId: string; onComplete: () => void }) {
   const [lines, setLines] = useState<typeof TERMINAL_LINES>([])
   const [elapsed, setElapsed] = useState(0)
   const [progress, setProgress] = useState(0)
   const [counts, setCounts] = useState({ critical: 0, high: 0, medium: 0, total: 0 })
   const [pipelineStep, setPipelineStep] = useState(0)
+  const [failed, setFailed] = useState(false)
   const terminalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,10 +50,38 @@ export default function Scanning({ target, onComplete }: { target: string; onCom
   }, [onComplete])
 
   useEffect(() => {
+    if (!scanId) return
+    let prevMessage = ''
+    const iv = setInterval(async () => {
+      try {
+        const status = await getScanStatus(scanId)
+        if (status.scan_status === 'Reconnoitering') setPipelineStep(0)
+        else if (status.scan_status === 'Scanning') setPipelineStep(1)
+        else if (status.scan_status === 'AI Analyzing') setPipelineStep(2)
+        if (status.pipeline_message && status.pipeline_message !== prevMessage) {
+          prevMessage = status.pipeline_message
+          setLines(prev => [...prev, { text: status.pipeline_message, color: '#00D4FF', bold: false }])
+        }
+        if (status.scan_status === 'Completed') {
+          clearInterval(iv)
+          onComplete()
+        } else if (status.scan_status === 'Failed') {
+          clearInterval(iv)
+          setFailed(true)
+          setLines(prev => [...prev, { text: '> [ERROR] Scan failed', color: '#FF3366', bold: false }])
+        }
+      } catch (err) {
+        console.error('Polling scan status failed:', err)
+      }
+    }, 2000)
+    return () => clearInterval(iv)
+  }, [scanId, onComplete])
+
+  useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight
     }
-  }, [lines])
+  }, [lines, failed])
 
   const pad = (n: number) => String(n).padStart(2, '0')
   const mm = pad(Math.floor(elapsed / 60))

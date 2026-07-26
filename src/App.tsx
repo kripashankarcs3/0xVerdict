@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { C, FINDINGS } from './constants'
-import type { NavStatus, AIStatus, Screen } from './types'
+import type { NavStatus, AIStatus, Screen, Finding, BackendFinding } from './types'
+import { startScan, getScanResult } from './utils/api'
 import CursorFollower from './components/CursorFollower'
 import Background from './components/Background'
 import Navbar from './components/Navbar'
@@ -27,6 +28,7 @@ export default function App() {
   const [showModal, setShowModal] = useState(false)
   const [aiStatus, setAiStatus] = useState<AIStatus>('active')
 
+  const [scanId, setScanId] = useState<string | null>(null)
   const [activeScanFindings, setActiveScanFindings] = useState<typeof FINDINGS>(FINDINGS)
   const [activeScanDate, setActiveScanDate] = useState('2026-07-25')
   const [activeScanDuration, setActiveScanDuration] = useState('45 sec')
@@ -62,14 +64,64 @@ export default function App() {
 
   const navStatus: NavStatus = screen === 'landing' ? 'idle' : screen === 'scanning' ? 'scanning' : 'complete'
 
-  const handleScan = useCallback((url: string) => {
+  const handleScan = useCallback(async (url: string) => {
+    try {
+      const result = await startScan(url)
+      setScanId(result.scan_id)
+    } catch (err) {
+      console.error('Failed to start scan:', err)
+    }
     setTarget(url)
     navigateTo('scanning')
   }, [])
 
-  const handleScanComplete = useCallback(() => {
+  function mapFinding(b: BackendFinding): Finding {
+    const verdict = b.ai_analysis?.verdict === 'Confirmed' ? 'confirmed' : b.ai_analysis?.verdict === 'Likely False Positive' ? 'fp' : 'verify'
+    return {
+      id: b.id,
+      type: b.type,
+      endpoint: b.endpoint,
+      verdict,
+      severity: (b.ai_analysis?.severity_classified?.toLowerCase() as Finding['severity']) || 'medium',
+      scannerSeverity: b.scanner_severity,
+      aiSeverity: b.ai_analysis?.severity_classified || 'Medium',
+      priority: ((b.ai_analysis?.priority_recommendation?.toLowerCase() === 'immediate' ? 'immediate' : b.ai_analysis?.priority_recommendation?.toLowerCase() === 'high' ? 'high' : b.ai_analysis?.priority_recommendation?.toLowerCase() === 'normal' ? 'normal' : 'low') as Finding['priority']),
+      confidence: verdict === 'confirmed' ? 'HIGH' : verdict === 'fp' ? 'LOW' : 'MEDIUM',
+      priorityReason: b.ai_analysis?.priority_reason || '',
+      confidenceReason: b.ai_analysis?.confidence_reason || '',
+      rootCause: b.ai_analysis?.root_cause || '',
+      devExplanation: b.ai_analysis?.developer_explanation || '',
+      fixRecommendation: b.ai_analysis?.fix_recommendation || '',
+      remediationCode: b.ai_analysis?.remediation_code?.secure_code_example || '',
+      manualSteps: (b.ai_analysis?.manual_verification_guide || '').split('\n').filter(s => s.trim() !== ''),
+      priorityNote: '',
+    }
+  }
+
+  const handleScanComplete = useCallback(async () => {
+    let findings = FINDINGS
+    let dateStr = new Date().toLocaleDateString('en-CA')
+    let durationStr = `${35 + Math.floor(Math.random() * 20)} sec`
+
+    if (scanId) {
+      try {
+        const result = await getScanResult(scanId)
+        const mapped = (result.findings || []).map(mapFinding)
+        if (mapped.length > 0) {
+          findings = mapped
+          dateStr = result.scan_date || dateStr
+          durationStr = result.scan_duration || durationStr
+        }
+      } catch (err) {
+        console.error('Failed to get scan result:', err)
+      }
+    }
+
     const base = target.replace(/\/$/, '')
-    const customized = FINDINGS.map(f => {
+    // Only override endpoints for mock FINDINGS fallback (not real backend data)
+    const usingRealData = scanId && findings !== FINDINGS
+    const customized = findings.map(f => {
+      if (usingRealData) return f  // Real backend data — keep endpoints as-is
       let endpoint = f.endpoint
       if (f.type.includes('SQL')) {
         endpoint = `${base}/api/products?id=1`
@@ -82,14 +134,8 @@ export default function App() {
       } else {
         endpoint = `${base}${f.endpoint}`
       }
-      return {
-        ...f,
-        endpoint,
-      }
+      return { ...f, endpoint }
     })
-
-    const dateStr = new Date().toLocaleDateString('en-CA')
-    const durationStr = `${35 + Math.floor(Math.random() * 20)} sec`
 
     const newScan: StoredScan = {
       scanId: `scan_${Date.now()}`,
@@ -108,7 +154,7 @@ export default function App() {
     setActiveScanDuration(durationStr)
 
     navigateTo('results', true)
-  }, [target])
+  }, [target, scanId])
 
   const handleLoadScan = useCallback((scan: StoredScan) => {
     setTarget(scan.targetUrl)
@@ -134,7 +180,7 @@ export default function App() {
         onLogoClick={handleBackToLanding}
       />
       {screen === 'landing' && <Landing onScan={handleScan} />}
-      {screen === 'scanning' && <Scanning target={target} onComplete={handleScanComplete} />}
+      {screen === 'scanning' && <Scanning target={target} scanId={scanId ?? ''} onComplete={handleScanComplete} />}
       {screen === 'results' && (
         <Results
           target={target}

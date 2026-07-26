@@ -223,7 +223,7 @@ export default function Results({
           </div>
 
           <div style={{
-            display: 'grid', gridTemplateColumns: '80px 1fr 90px 160px 110px 120px',
+            display: 'grid', gridTemplateColumns: '72px 1fr 160px 150px 100px 100px',
             padding: '0 24px', height: 38, alignItems: 'center',
             borderBottom: `1px solid ${C.border}`, flexShrink: 0,
             background: 'rgba(10, 10, 15, 0.5)',
@@ -249,7 +249,7 @@ export default function Results({
                   aria-label={`Finding: ${f.type} at ${f.endpoint}`}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(isSelected ? null : f) } }}
                   style={{
-                    display: 'grid', gridTemplateColumns: '80px 1fr 90px 160px 110px 120px',
+                    display: 'grid', gridTemplateColumns: '72px 1fr 160px 150px 100px 100px',
                     padding: '0 24px', height: 48, alignItems: 'center',
                     cursor: 'pointer', position: 'relative',
                     borderBottom: `1px solid ${C.border}`,
@@ -270,9 +270,9 @@ export default function Results({
                       : 'none',
                   }} />
 
-                  <span style={{ fontFamily: FONT.mono, fontSize: 11, color: C.muted }}>{f.id}</span>
-                  <span style={{ fontFamily: FONT.inter, fontWeight: 600, fontSize: 13, color: C.textPrimary }}>{f.type}</span>
-                  <span style={{ fontFamily: FONT.mono, fontSize: 11, color: C.cyan }}>{f.endpoint}</span>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 11, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.id}</span>
+                  <span style={{ fontFamily: FONT.inter, fontWeight: 600, fontSize: 13, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{f.type}</span>
+                  <span title={f.endpoint} style={{ fontFamily: FONT.mono, fontSize: 11, color: C.cyan, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 4 }}>{f.endpoint}</span>
                   <VerdictBadge verdict={f.verdict} />
                   <SeverityBadge severity={f.severity} />
                   <PriorityBadge priority={f.priority} />
