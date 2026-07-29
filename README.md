@@ -8,6 +8,8 @@
   <b>AI-Powered Web Vulnerability Scanner</b>
 </p>
 
+> **Live App**: [https://0x-verdict.vercel.app/](https://0x-verdict.vercel.app/)
+
 0xVerdict is an AI-powered web vulnerability scanner that turns raw scan output into developer-friendly security intelligence. It combines a React dashboard for the UI, a FastAPI backend for scan orchestration, and AI-assisted analysis for verdicts, remediation guidance, and reporting.
 
 ## Highlights
