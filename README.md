@@ -120,8 +120,7 @@ The pipeline runs asynchronously in four phases:
 | **AI** | OpenRouter (DeepSeek V4) | Vulnerability analysis & chat |
 | **HTTP** | aiohttp / httpx | Async crawling & API calls |
 | **PDF** | WeasyPrint + ReportLab | Report generation |
-| **Deploy FE** | Vercel | Static site hosting |
-| **Deploy BE** | Render | Python web service |
+
 
 ---
 
@@ -211,25 +210,7 @@ uvicorn main:app --host 0.0.0.0 --port 5432 --reload
 # → http://localhost:5432
 ```
 
-### Environment Variables
 
-Copy `backend/.env.example` to `backend/.env` and configure:
-
-| Variable | Description |
-|---|---|
-| `OPENCODE_API_KEY` | OpenRouter API key (required for AI) |
-| `OPENCODE_MODEL` | AI model (default: `deepseek-v4-flash-free`) |
-| `PORT` | Backend port (default: `5432`) |
-| `ALLOWED_ORIGINS` | CORS origins, comma-separated |
-| `CRAWL_DEPTH` | Max crawl depth (default: `2`) |
-| `MAX_PAGES` | Max pages to crawl (default: `30`) |
-
-Also set `VITE_API_URL` in root `.env` to point to your backend:
-```
-VITE_API_URL=http://localhost:5432
-```
-
----
 
 ## API Endpoints
 
@@ -245,26 +226,6 @@ VITE_API_URL=http://localhost:5432
 | `GET` | `/scan/{id}/report/pdf` | Download PDF report |
 | `POST` | `/chat` | AI security chat (non-streaming) |
 | `POST` | `/chat/stream` | AI security chat (SSE streaming) |
-
----
-
-## Deployment
-
-### Frontend → Vercel
-
-1. Connect repo to Vercel
-2. Set **Root Directory** to `frontend`
-3. Add env variable: `VITE_API_URL` = your backend URL
-4. Deploy
-
-### Backend → Render
-
-1. Create a new **Web Service**
-2. Set **Root Directory** to `backend`
-3. **Build Command**: `pip install -r requirements.txt`
-4. **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-5. Add env variables (`OPENCODE_API_KEY`, `ALLOWED_ORIGINS`, etc.)
-6. Deploy
 
 ---
 
