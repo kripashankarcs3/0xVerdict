@@ -241,6 +241,12 @@ Only scan targets you own or are explicitly authorized to test.
 
 ---
 
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/kripashankarcs3">kripashankarcs3</a>
+</p>
+
 ## License
 
 MIT
