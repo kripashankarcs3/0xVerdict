@@ -1,23 +1,33 @@
-# figma-make-app
+# 0xVerdict
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+AI-Powered Web Vulnerability Scanner
 
-## Development Server
+## Structure
 
-A Vite development server is **always running** on `$PORT` (default 8443). You don't need to start it manually.
+```
+0xVerdict/
+├── frontend/       React + Vite + Tailwind CSS (port 8443)
+├── backend/        FastAPI Python backend (port 5432)
+├── .env            Environment variables
+├── package.json    Root scripts (dev, build)
+└── README.md
+```
 
-- Preview URL: The user can access the running app through the preview panel
-- Hot reload: Changes to source files are reflected immediately
+## Development
 
-## Key Files
+### Frontend
+```bash
+npm run dev        # starts Vite on port 8443
+```
 
-- `src/App.tsx` - Main application component
-- `src/main.tsx` - React entry point
-- `src/index.css` - Global styles and Tailwind CSS import
-- `package.json` - Dependencies and scripts
-- `vite.config.ts` - Vite configuration
-- `.mise.toml` - Toolchain versions (Node.js, pnpm)
+### Backend
+```bash
+cd backend
+venv\Scripts\Activate.ps1
+uvicorn main:app --host 0.0.0.0 --port 5432 --reload
+```
 
-## Styling
+## Deployment
 
-This project uses **Tailwind CSS v4** for styling. Use Tailwind utility classes directly in JSX. Tailwind is loaded via the Vite plugin — no PostCSS config needed.
+- Frontend: Vercel (root: `frontend/`)
+- Backend: Render Web Service (root: `backend/`)
