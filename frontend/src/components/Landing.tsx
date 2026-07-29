@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { C, FONT, MOTION } from '../constants'
 import { useTypewriter } from '../hooks/useTypewriter'
 import { useReveal } from '../hooks/useReveal'
-import finalLogo from '@/imports/final_logo.png'
+import finalLogo from '@/assets/final_logo.png'
 
 const FEATURE_CARDS = [
   {

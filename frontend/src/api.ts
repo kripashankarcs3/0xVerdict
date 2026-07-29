@@ -1,6 +1,6 @@
 import type { ScanResult } from './types'
 
-const API_BASE = 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5432'
 
 export async function startScan(targetUrl: string): Promise<{ scan_id: string; status: string; target_url: string }> {
   const res = await fetch(`${API_BASE}/scan/start`, {

@@ -74,7 +74,7 @@ async def health():
             __import__(lib)
             pdf_method = lib
             break
-        except ImportError:
+        except Exception:
             continue
 
     all_states = state_manager.list_scans()
@@ -162,7 +162,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    """AI Security Chat — uses the configured OpenRouter API key. No user key needed."""
+    """AI Security Chat — non-streaming fallback."""
     if not request.message.strip():
         return {"error": "Empty message"}
 
@@ -172,32 +172,22 @@ async def chat(request: ChatRequest):
         response = await asyncio.wait_for(
             fresh_client.chat.completions.create(
                 model=OPENROUTER_MODEL,
-                max_tokens=1000,
+                max_tokens=65535,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are VerdictAI, a cybersecurity expert in 0xVerdict. "
-                            "Answer concisely and technically. Use markdown for code."
-                        )
-                    },
+                    {"role": "system", "content": "You are VerdictAI, a cybersecurity expert in 0xVerdict. Answer concisely and technically. Use markdown for code. Always respond in the same language as the user's query."},
                     {"role": "user", "content": request.message.strip()}
                 ],
             ),
-            timeout=25.0
+            timeout=60.0
         )
         content = response.choices[0].message.content or ""
         if not content.strip() and hasattr(response.choices[0].message, 'reasoning_content'):
             reasoning = response.choices[0].message.reasoning_content or ""
-            # For reasoning models: extract the final answer after thinking
-            # Look for patterns like "**Answer:**" or the last paragraph
             import re as _re
-            # Try to find conclusion after "In conclusion" or "**" headers
             parts = _re.split(r'\n\n(?=\*\*(?:Answer|Summary|Conclusion|Response|Result))', reasoning)
             if len(parts) > 1:
                 content = parts[-1].strip()
             else:
-                # Take last 2 paragraphs as the answer
                 paras = [p.strip() for p in reasoning.strip().split('\n\n') if p.strip()]
                 content = '\n\n'.join(paras[-2:]) if len(paras) >= 2 else reasoning.strip()
         return {"response": content.strip() or "No response generated."}
@@ -205,8 +195,52 @@ async def chat(request: ChatRequest):
         return {"response": "Request timed out. Please try again."}
     except Exception as e:
         return {"error": str(e), "response": f"AI error: {str(e)}"}
-    except Exception as e:
-        return {"error": str(e), "response": f"AI error: {str(e)}"}
+
+
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """AI Security Chat — streaming SSE endpoint. Token-by-token response."""
+    if not request.message.strip():
+        return {"error": "Empty message"}
+
+    async def event_generator():
+        try:
+            from engines.ai_orchestrator import _get_client, OPENROUTER_MODEL
+            fresh_client = _get_client()
+            stream = await asyncio.wait_for(
+                fresh_client.chat.completions.create(
+                    model=OPENROUTER_MODEL,
+                    max_tokens=65535,
+                    stream=True,
+                    stream_options={"include_usage": True},
+                    messages=[
+                        {"role": "system", "content": "You are VerdictAI, a cybersecurity expert in 0xVerdict. Answer concisely and technically. Use markdown for code. Always respond in the same language as the user's query."},
+                        {"role": "user", "content": request.message.strip()}
+                    ],
+                ),
+                timeout=180.0
+            )
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield f"data: {delta.content}\n\n"
+            yield "data: [DONE]\n\n"
+        except asyncio.TimeoutError:
+            yield "data: [TIMEOUT]\n\n"
+        except Exception as e:
+            yield f"data: [ERROR: {str(e)}]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 # ── Scan Pipeline ──────────────────────────────────────────────────────────────
@@ -242,4 +276,4 @@ async def run_scan_pipeline(scan_id: str, target_url: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=5432, reload=True)

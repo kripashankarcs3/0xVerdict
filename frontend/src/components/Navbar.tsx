@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { C, FONT } from '../constants'
 import type { NavStatus, AIStatus, Screen } from '../types'
-import finalLogo from '@/imports/final_logo.png'
+import finalLogo from '@/assets/final_logo.png'
 
 export default function Navbar({
   status,

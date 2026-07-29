@@ -1,5 +1,5 @@
 import { C, FONT, FINDINGS } from '../constants'
-import finalLogo from '@/imports/final_logo.png'
+import finalLogo from '@/assets/final_logo.png'
 
 export default function PdfModal({ target, onClose }: { target: string; onClose: () => void }) {
   return (

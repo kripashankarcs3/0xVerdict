@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
+const rootDir = path.resolve(__dirname, '..')
+const frontendDir = path.resolve(__dirname)
+
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const emitSourcemaps = mode === 'development'
@@ -20,19 +23,35 @@ export default defineConfig(({ mode }) => {
       errorOverlayReplay(),
       reactRefreshBoundaryFallback(),
     ],
+    root: frontendDir,
+    publicDir: path.resolve(frontendDir, 'public'),
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(frontendDir, 'src'),
       },
     },
     server: {
       host: '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
+      proxy: {
+        '/opencode-api': {
+          target: 'https://opencode.ai/zen/v1',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/opencode-api/, ''),
+        },
+      },
     },
     preview: {
       host: '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
+      proxy: {
+        '/opencode-api': {
+          target: 'https://opencode.ai/zen/v1',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/opencode-api/, ''),
+        },
+      },
     },
   }
 })

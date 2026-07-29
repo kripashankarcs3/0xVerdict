@@ -1,265 +1,79 @@
+# 0xVerdict
 
-<p align="center">
-  <img src="src/imports/final_logo.png" alt="0xVerdict Logo" width="120" height="120" style="border-radius: 50%;">
-</p>
+0xVerdict is an AI-powered web vulnerability scanner that turns raw scan output into developer-friendly security intelligence.
 
-<h1 align="center">⚡ 0xVerdict</h1>
+It combines a React dashboard for the UI, a FastAPI backend for scan orchestration, and AI-assisted analysis for verdicts, remediation guidance, and reporting.
 
-<p align="center">
-  <b>AI-Powered Web Vulnerability Scanner</b><br>
-  <i>Raw scanner output → Developer-ready security intelligence</i>
-</p>
+## Highlights
 
-<p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React 19">
-  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white" alt="Vite 8">
-  <img src="https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS v4">
-  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
-  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
-</p>
+- AI-assisted verdicts for scan findings
+- Root-cause explanations and fix guidance
+- Markdown and PDF report generation
+- Scan history and results review
+- Cyberpunk-style security dashboard
 
----
+## Tech Stack
 
-## 🎯 What is 0xVerdict?
+- Frontend: React 19, TypeScript, Vite, Tailwind CSS v4
+- Backend: Python 3.12, FastAPI, Pydantic
+- AI: OpenRouter-compatible analysis pipeline
+- Reports: Markdown, WeasyPrint, ReportLab
+- Deployment: Docker and Docker Compose
 
-**0xVerdict** is a next-gen web vulnerability scanner that doesn't just find bugs — it **understands** them.
+## Repository Layout
 
-Traditional scanners drown you in raw output, false positives, and jargon. 0xVerdict runs a three-phase pipeline that **crawls**, **detects**, and then **analyzes** every finding through an **AI engine** — giving you:
-
-- ✅ What's real vs. what's noise (AI verdicts: *Confirmed / Needs Verification / False Positive*)
-- 🧠 **Root cause analysis** — *why* this vulnerability exists
-- 🔧 **Fix recommendations** with secure code examples in Node.js, Python, and PHP
-- 📊 **Professional PDF & Markdown reports**
-
-> ⚡ Scan. Analyze. Fix. Ship.
-
----
-
-## 🏗️ Architecture
-
-```
-┌──────────────┐     ┌──────────────────────────────────────────────────┐
-│    User      │     │              0xVerdict Backend                   │
-│  (Browser)   │     │                                                  │
-│              │     │  ┌──────────┐  ┌────────────┐  ┌──────────────┐ │
-│  React 19    │─────│▶│  Recon    │─▶│ Detection  │─▶│      AI      │ │
-│  SPA +       │     │  Engine   │  │  Engine    │  │ Orchestrator │ │
-│  Tailwind v4 │     │  (crawler,│  │  (SQLi,    │  │  (Claude     │ │
-│              │     │   headers)│  │   XSS)     │  │   Sonnet)    │ │
-└──────────────┘     │  └──────────┘  └────────────┘  └──────┬───────┘ │
-                     │                                       │         │
-                     │                              ┌────────▼───────┐ │
-                     │                              │   Reporting   │ │
-                     │                              │    Engine     │ │
-                     │                              │  (PDF + Markdown) │
-                     │                              └────────────────┘ │
-                     └──────────────────────────────────────────────────┘
+```text
+0xVerdict/
++-- frontend/                      # Active React + Vite app
+|   +-- src/                       # UI source code
++-- services/
+|   +-- 0xverdict-take-idea/
+|       +-- backend/               # FastAPI scanner service
+|       +-- frontend/              # Service-side frontend snapshot
++-- docs/                          # Additional documentation
++-- legacy/                        # Archived snapshots and older iterations
++-- package.json                   # Root scripts for the active frontend
++-- README.md                      # Project overview
 ```
 
-### The Pipeline
+## Run Locally
 
-| Phase | Engine | What it does |
-|-------|--------|-------------|
-| 🔍 **Recon** | Crawler + Header Analyzer | Discovers pages, forms, inputs, and checks HTTP security headers (CSP, HSTS, etc.) |
-| 🎯 **Detection** | SQLi + XSS + Header Scanners | Fires 20+ SQL injection payloads, tests for reflected XSS, flags missing security headers |
-| 🧠 **AI Analysis** | AI Orchestrator (Claude Sonnet) | Classifies each finding, filters false positives, provides root cause + fix code |
-| 📄 **Reporting** | Markdown + PDF Generator | Exports professional-grade security reports |
+### Frontend
 
----
-
-## ✨ Features
-
-### 🔬 Smart Scan Engine
-- Multi-depth crawling (Light / Medium / Deep)
-- SQL Injection detection (20+ payload patterns)
-- Reflected XSS detection
-- HTTP Security Header audit (CSP, HSTS, X-Frame-Options, etc.)
-
-### 🤖 AI-Powered Analysis
-- **Verdict Classification** — Confirmed / Needs Manual Verification / Likely False Positive
-- **Severity Reclassification** — AI re-evaluates severity beyond regex heuristics
-- **Root Cause Analysis** — Explains *why* the vulnerability exists in plain language
-- **Secure Code Examples** — Fix snippets in Node.js, Python, and PHP
-- **Confidence Meter** — How sure is the AI about its verdict?
-
-### 🖥️ Cyberpunk Dashboard
-- Real-time terminal-style scan logs
-- Animated Matrix rain & glitch effects
-- Interactive results panel with filterable findings
-- Verdict badges with color-coded severity
-- Custom cursor follower & HUD-style UI
-
-### 📊 Professional Reports
-- **PDF Reports** — Cover page, executive summary, severity grid, per-finding deep dives
-- **Markdown Reports** — Clean, portable documentation
-- Both include AI analysis, code examples, and remediation steps
-
-### 🗂️ Scan History
-- Persistent localStorage history
-- Search & filter past scans
-- Load & review previous results
-
-### 🌍 Global Threat Intelligence
-- Live CVE feed (simulated real CVEs)
-- Severity filters & telemetry stats
-- Status tracking (Active / Patched / In Progress)
-
-### 💬 AI Security Chat
-- Built-in terminal-style chat with AI
-- Ask security questions without running a scan
-- Powered by OpenRouter / OpenCode API
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- [Node.js](https://nodejs.org/) ≥ 18
-- [pnpm](https://pnpm.io/) or npm
-- [Python](https://python.org/) ≥ 3.12
-- [OpenRouter API Key](https://openrouter.ai/) (for AI features)
-
-### Frontend Only (Demo Mode)
 ```bash
 pnpm install
 pnpm run dev
 ```
-Opens at `http://localhost:8443` — works offline with simulated data.
 
-### Full Stack (with Backend)
+This starts the active Vite app from `frontend/` and serves it on `http://localhost:8443`.
 
-#### Backend
+### Backend
+
 ```bash
-cd 0xverdict-take-idea/backend
+cd services/0xverdict-take-idea/backend
 python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\Activate.ps1
+venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-cp .env.example .env        # Add your OPENROUTER_API_KEY
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-#### Frontend
-```bash
-pnpm install
-pnpm run dev
-```
+## Project Notes
 
-#### Or with Docker
-```bash
-cd 0xverdict-take-idea
-docker compose up --build
-```
+- The active UI lives in `frontend/`.
+- The backend service lives in `services/0xverdict-take-idea/backend/`.
+- `legacy/` and the top-level `0xverdict-take-idea/` folder are kept as migration-era folders and should be treated as historical unless you explicitly decide to consolidate them.
+- Generated folders such as `dist/`, `node_modules/`, `venv/`, and `__pycache__/` are already ignored.
 
----
+## Safe Testing
 
-## 🧪 Safe Test Targets
+Only scan targets you own or are explicitly authorized to test.
 
-| Target | URL | Description |
-|--------|-----|-------------|
-| Vulnweb | `http://testphp.vulnweb.com` | Intentionally vulnerable PHP app |
-| DVWA | `http://localhost/dvwa` | Damn Vulnerable Web App |
-| Juice Shop | `http://localhost:3000` | OWASP Juice Shop (Docker) |
+Examples of safe lab targets:
 
-> ⚠️ **You must have explicit written authorization to scan any target. Unauthorized scanning is illegal.**
+- OWASP Juice Shop
+- DVWA
+- Vulnweb test environments
 
----
+## Status
 
-## 📁 Project Structure
-
-```
-0xverdict/
-├── src/                          # React Frontend
-│   ├── App.tsx                   # App shell + navigation
-│   ├── main.tsx                  # React entry point
-│   ├── index.css                 # Tailwind + custom animations
-│   ├── api.ts                    # Backend API client
-│   ├── constants.ts              # Design tokens + mock data
-│   ├── types.ts                  # TypeScript type definitions
-│   ├── components/
-│   │   ├── Landing.tsx           # Hero, URL input, features
-│   │   ├── Scanning.tsx          # Live scan progress + terminal
-│   │   ├── Results.tsx           # Findings dashboard
-│   │   ├── AIPanel.tsx           # AI verdict detail panel
-│   │   ├── AIChat.tsx            # Security advisor chat
-│   │   ├── History.tsx           # Scan history browser
-│   │   ├── Threats.tsx           # Global threat feed
-│   │   ├── ApiHub.tsx            # API documentation
-│   │   ├── Navbar.tsx            # Top navigation
-│   │   ├── Background.tsx        # Matrix rain + animations
-│   │   ├── Badges.tsx            # Verdict/Severity badges
-│   │   ├── PdfModal.tsx          # PDF report preview
-│   │   └── CursorFollower.tsx    # Custom cursor
-│   ├── hooks/
-│   │   ├── useTypewriter.ts      # Typewriter animation
-│   │   └── useReveal.ts          # Fade-in reveal
-│   └── imports/
-│       └── final_logo.png        # Project logo
-│
-├── 0xverdict-take-idea/
-│   ├── docker-compose.yml        # Full-stack Docker setup
-│   └── backend/
-│       ├── main.py               # FastAPI app + routing
-│       ├── models.py             # Pydantic schemas
-│       ├── state_manager.py      # Scan state persistence
-│       └── engines/
-│           ├── recon.py          # Web crawler + header analyzer
-│           ├── detection.py      # SQLi + XSS scanner
-│           ├── ai_orchestrator.py # AI analysis engine
-│           └── reporter.py       # PDF + Markdown generator
-│
-├── vite.config.ts                # Vite configuration
-├── package.json                  # Dependencies & scripts
-└── tsconfig.json                 # TypeScript configuration
-```
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 19, TypeScript 5.7, Vite 8, Tailwind CSS v4 |
-| **Backend** | Python 3.12, FastAPI, Pydantic v2 |
-| **AI** | OpenRouter API (Claude Sonnet / DeepSeek) |
-| **Scanning** | aiohttp async HTTP client |
-| **Reports** | Markdown, WeasyPrint, ReportLab |
-| **Deployment** | Docker, Docker Compose, Nginx |
-
----
-
-## 📡 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/scan/start` | Start a new scan |
-| `GET` | `/scan/{id}/status` | Poll scan progress |
-| `GET` | `/scan/{id}/result` | Get full results |
-| `GET` | `/scan/{id}/report/markdown` | Download Markdown report |
-| `GET` | `/scan/{id}/report/pdf` | Download PDF report |
-| `GET` | `/scans` | List all past scans |
-| `GET` | `/health` | Backend health check |
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/amazing`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feat/amazing`)
-5. Open a Pull Request
-
----
-
-## ⚖️ Legal Disclaimer
-
-**NOTICE:** This tool is intended exclusively for authorized security testing environments (e.g., OWASP Juice Shop, DVWA, or targets where explicit written permission has been granted). Unauthorized scanning of external networks violates global cyber defense frameworks and local regulations. The authors assume no liability for misuse.
-
----
-
-<p align="center">
-  <b>Built with ❤️ for developers who take security seriously.</b><br>
-  <sub>Don't just find vulnerabilities — understand them.</sub>
-</p>
+The codebase is in a good place for a public demo, but the repository still contains migration-era folders. If you want the strongest GitHub impression, the next step would be a cleanup pass that consolidates the active frontend and backend into one clearly documented release structure.

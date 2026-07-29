@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { C, FONT } from '../constants'
-import { askAI } from '../utils/aiClient'
+import ReactMarkdown from 'react-markdown'
+import remarkBreaks from 'remark-breaks'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5432'
 
 interface Message {
   sender: 'user' | 'ai' | 'system'
@@ -41,17 +44,55 @@ export default function AIChat() {
     setLoading(true)
 
     try {
-      const response = await askAI(
-        prompt,
-        'You are VerdictAI, an advanced cybersecurity analyst embedded in 0xVerdict — an AI-powered web vulnerability scanner. Help developers understand and fix web vulnerabilities. Be technical, concise, and use markdown for code examples.'
-      )
+      const res = await fetch(`${API_BASE}/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: prompt }),
+      })
+      if (!res.ok) throw new Error(`Backend error: ${res.statusText}`)
 
       const aiMsg: Message = {
         sender: 'ai',
-        text: response || 'No response received. Please try again.',
+        text: '',
         timestamp: new Date().toLocaleTimeString()
       }
       setMessages(prev => [...prev, aiMsg])
+
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let firstContent = true
+      let streamDone = false
+
+      while (!streamDone) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || !trimmed.startsWith('data: ')) continue
+          const data = trimmed.slice(6)
+          if (data === '[DONE]' || data === '[TIMEOUT]') { streamDone = true; break }
+          if (data.startsWith('[ERROR')) {
+            setMessages(prev => prev.map((m, i) =>
+              i === prev.length - 1 && m.sender === 'ai'
+                ? { ...m, text: m.text || `Error: ${data.slice(7, -1)}` }
+                : m
+            ))
+            streamDone = true; break
+          }
+          if (firstContent) { setLoading(false); firstContent = false }
+          setMessages(prev => prev.map((m, i) =>
+            i === prev.length - 1 && m.sender === 'ai'
+              ? { ...m, text: m.text + data }
+              : m
+          ))
+        }
+      }
     } catch (err) {
       setMessages(prev => [...prev, {
         sender: 'system',
@@ -153,9 +194,33 @@ export default function AIChat() {
                   color: isSystem ? C.muted : C.textPrimary,
                   fontFamily: isSystem || !isUser ? FONT.mono : FONT.inter,
                   fontSize: isSystem ? 10 : 12, lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  wordBreak: 'break-word',
                 }}>
-                  {msg.text}
+                  {isUser || isSystem ? msg.text : (
+                    <div style={{whiteSpace:'pre-wrap'}}>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkBreaks]}
+                        components={{
+                          p: ({node, ...props}) => <p style={{margin:'0 0 8px 0'}} {...props} />,
+                          code: ({node, ...props}) => <code style={{background:'rgba(0,255,136,0.1)',padding:'2px 6px',borderRadius:4,fontSize:11}} {...props} />,
+                          pre: ({node, ...props}) => <pre style={{background:'rgba(0,0,0,0.4)',padding:12,borderRadius:6,overflow:'auto',fontSize:11,lineHeight:1.4}} {...props} />,
+                          a: ({node, ...props}) => <a style={{color:'#00d4ff'}} target="_blank" {...props} />,
+                          ul: ({node, ...props}) => <ul style={{margin:'6px 0',paddingLeft:20}} {...props} />,
+                          ol: ({node, ...props}) => <ol style={{margin:'6px 0',paddingLeft:20}} {...props} />,
+                          li: ({node, ...props}) => <li style={{marginBottom:4}} {...props} />,
+                          h1: ({node, ...props}) => <h1 style={{fontSize:16,fontWeight:700,margin:'12px 0 6px 0'}} {...props} />,
+                          h2: ({node, ...props}) => <h2 style={{fontSize:14,fontWeight:700,margin:'10px 0 4px 0'}} {...props} />,
+                          h3: ({node, ...props}) => <h3 style={{fontSize:13,fontWeight:600,margin:'8px 0 4px 0'}} {...props} />,
+                          hr: ({node, ...props}) => <hr style={{border:'none',borderTop:'1px solid rgba(0,255,136,0.15)',margin:'12px 0'}} {...props} />,
+                          strong: ({node, ...props}) => <strong style={{color:'#00ff88'}} {...props} />,
+                          blockquote: ({node, ...props}) => <blockquote style={{borderLeft:'3px solid rgba(0,255,136,0.3)',paddingLeft:12,margin:'8px 0',color:'rgba(255,255,255,0.7)'}} {...props} />,
+                          table: ({node, ...props}) => <div style={{overflow:'auto'}}><table style={{borderCollapse:'collapse',width:'100%',fontSize:11,margin:'8px 0'}} {...props} /></div>,
+                          th: ({node, ...props}) => <th style={{border:'1px solid rgba(0,255,136,0.2)',padding:'6px 10px',background:'rgba(0,255,136,0.08)',textAlign:'left'}} {...props} />,
+                          td: ({node, ...props}) => <td style={{border:'1px solid rgba(0,255,136,0.15)',padding:'6px 10px'}} {...props} />,
+                        }}
+                      >{msg.text}</ReactMarkdown>
+                    </div>
+                  )}
                 </div>
               </div>
             )

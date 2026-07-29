@@ -185,13 +185,13 @@ class ReportingEngine:
         # Try weasyprint (best quality)
         try:
             return self._generate_pdf_weasyprint(md_content, scan_id)
-        except ImportError:
+        except Exception:
             pass
 
         # Fallback to reportlab
         try:
             return self._generate_pdf_reportlab(scan_id)
-        except ImportError:
+        except Exception:
             pass
 
         # Last resort: save as plain text PDF placeholder
