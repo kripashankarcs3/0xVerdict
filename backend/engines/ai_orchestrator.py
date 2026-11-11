@@ -5,25 +5,38 @@ using an LLM via OpenRouter (OpenAI-compatible API).
 
 Provider: OpenRouter (https://openrouter.ai)
 Set environment variables:
-  OPENROUTER_API_KEY  — your OpenRouter API key (required)
-  OPENROUTER_MODEL    — model to use (optional, default: meta-llama/llama-3.3-70b-instruct:free)
+  OPENCODE_API_KEY    - your OpenCode Zen API key (required, read from backend/.env)
+  OPENCODE_MODEL      - model to use (optional, default: big-pickle)
 """
 
 import asyncio
 import json
 import os
 import re
+from pathlib import Path
+
 from openai import AsyncOpenAI
+
+# Load backend/.env so secrets come from the environment, never from source code.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:  # python-dotenv missing: rely on variables already set in the environment
+    pass
 
 # OpenCode Zen uses OpenAI-compatible API
 OPENROUTER_BASE_URL = "https://opencode.ai/zen/v1"
-OPENROUTER_API_KEY = os.environ.get("OPENCODE_API_KEY", "sk-VIbqP1rTs1nUows5PLp7Rts2HPoTZTdD4tFDDszqbuhlBGF0u02Q8ihFNUbRp4MX")
+OPENROUTER_API_KEY = os.environ.get("OPENCODE_API_KEY", "")
+if not OPENROUTER_API_KEY:
+    print("[ai_orchestrator] WARNING: OPENCODE_API_KEY is not set; AI analysis will fail until it is.")
 OPENROUTER_MODEL = os.environ.get("OPENCODE_MODEL", "big-pickle")
 
 
 def _get_client() -> AsyncOpenAI:
-    """Always use the hardcoded key — no env lookup to avoid loading issues."""
-    return AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url=OPENROUTER_BASE_URL)
+    """Build a client from the OPENCODE_API_KEY environment variable."""
+    # Placeholder keeps the app importable without a key; AI calls then fail with an auth error.
+    return AsyncOpenAI(api_key=OPENROUTER_API_KEY or "not-set", base_url=OPENROUTER_BASE_URL)
 
 
 client = _get_client()

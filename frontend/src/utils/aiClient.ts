@@ -7,7 +7,7 @@ const OPENCODE_BASE_URL = '/opencode-api'
 const OPENCODE_MODEL = 'deepseek-v4-flash-free'
 
 function getApiKey(): string {
-  return import.meta.env.VITE_OPENCODE_API_KEY || 'sk-VIbqP1rTs1nUows5PLp7Rts2HPoTZTdD4tFDDszqbuhlBGF0u02Q8ihFNUbRp4MX'
+  return import.meta.env.VITE_OPENCODE_API_KEY || ''
 }
 
 function extractAnswer(content: string, reasoning: string): string {
@@ -50,6 +50,10 @@ export async function askAI(
   systemInstruction = 'You are VerdictAI, an expert cybersecurity analyst. Be concise and technical. Answer directly without explaining your thinking process.'
 ): Promise<string | null> {
   const apiKey = getApiKey()
+  if (!apiKey) {
+    console.warn('VITE_OPENCODE_API_KEY is not set; AI features are disabled.')
+    return null
+  }
 
   try {
     const response = await fetch(`${OPENCODE_BASE_URL}/chat/completions`, {
